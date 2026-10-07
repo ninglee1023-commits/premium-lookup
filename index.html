@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f6b5c">
+<meta name="robots" content="noindex,nofollow">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="保費速查">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>保費速查</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: single phone column — sticky product rail, form, then a ledger-style result slip */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --ink:#18211f; --muted:#5f6b67; --line:#d9dedb;
+  --accent:#0f6b5c; --accent-ink:#ffffff; --accent-soft:#e1efeb; --warn:#a14a12; --warn-soft:#fbeee2;
+  --slip:#fffdf6; --slip-line:#e6e0cc;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111715; --surface:#19211f; --ink:#e7ece9; --muted:#9aa7a2; --line:#2c3633;
+  --accent:#4fbfa6; --accent-ink:#06201a; --accent-soft:#183a33; --warn:#f0a868; --warn-soft:#3a2716;
+  --slip:#1d2522; --slip-line:#33403b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111715; --surface:#19211f; --ink:#e7ece9; --muted:#9aa7a2; --line:#2c3633;
+  --accent:#4fbfa6; --accent-ink:#06201a; --accent-soft:#183a33; --warn:#f0a868; --warn-soft:#3a2716;
+  --slip:#1d2522; --slip-line:#33403b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:14px 40px;display:flex;flex-direction:column;gap:14px}
+header h1{margin:0;font-size:22px;letter-spacing:.02em}
+header p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.rail{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.chip{min-width:0;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:7px 10px;text-align:left;font:inherit;font-size:13.5px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+.chip small{font-family:var(--f-num);font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip[aria-pressed="true"] small{color:var(--accent-ink);opacity:.8}
+.chip:focus-visible,.seg button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.field>.lab{font-size:12.5px;color:var(--muted);letter-spacing:.04em}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 0;min-width:52px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:9px;padding:9px 6px;font:inherit;font-size:14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:700}
+.seg button:disabled{opacity:.35;cursor:not-allowed}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stepper{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--bg)}
+.stepper button{width:44px;border:0;background:transparent;color:var(--ink);font-size:20px;cursor:pointer}
+.stepper input{flex:1;min-width:0;border:0;background:transparent;text-align:center;font-family:var(--f-num);font-size:18px;color:var(--ink);padding:8px 0}
+.money{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--bg);padding-inline:10px}
+.money span{font-family:var(--f-num);color:var(--muted);font-size:13px}
+.money input{flex:1;min-width:0;border:0;background:transparent;font-family:var(--f-num);font-size:18px;color:var(--ink);padding:9px 8px;text-align:right}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.quick button{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:7px;padding:4px 8px;font-family:var(--f-num);font-size:12px;cursor:pointer}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.slip{background:var(--slip);border:1px solid var(--slip-line);border-radius:14px;padding:16px 14px;display:flex;flex-direction:column;gap:10px;font-variant-numeric:tabular-nums}
+.slip .k{font-size:12.5px;color:var(--muted);letter-spacing:.04em}
+.big{font-family:var(--f-num);font-size:34px;font-weight:600;line-height:1.1;word-break:break-all}
+.big small{font-size:14px;color:var(--muted);font-weight:500;margin-left:4px}
+.ledger{display:flex;flex-direction:column;border-top:1px dashed var(--slip-line)}
+.ledger div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--slip-line);font-size:14px}
+.ledger b{font-family:var(--f-num);font-weight:500;text-align:right}
+.formula{font-family:var(--f-num);font-size:12px;color:var(--muted);word-break:break-word;margin:0}
+.err{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px}
+.notes{margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;gap:4px}
+.src{font-size:12px;color:var(--muted)}
+.h2{margin:0;font-size:16px}
+.chart{position:relative;width:100%;min-width:0;touch-action:pan-y}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .axis{fill:var(--muted);font-family:var(--f-num);font-size:10.5px}
+.chart .ln{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round}
+.chart .area{fill:var(--accent);opacity:.10}
+.chart .me{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.chart .xh{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.chart .hd{fill:var(--surface);stroke:var(--accent);stroke-width:2}
+.tip{position:absolute;top:0;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:6px 9px;font-size:12px;line-height:1.4;white-space:nowrap;transform:translateX(-50%);font-variant-numeric:tabular-nums}
+.tip b{font-family:var(--f-num);font-weight:600}
+.ledger.compact div{font-size:13.5px;padding:6px 0}
+.tbl summary{cursor:pointer;color:var(--accent);font-size:13.5px}
+.tblwrap{overflow-x:auto;margin-top:8px}
+.tblwrap table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.tblwrap th,.tblwrap td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.tblwrap th:first-child,.tblwrap td:first-child{text-align:left}
+.tblwrap tr.cur td{background:var(--accent-soft);font-weight:700}
+.chart .bar{fill:var(--accent);opacity:.55}
+.chart .bar.on{opacity:1}
+.chart .bar.hv{opacity:.9;stroke:var(--ink);stroke-width:.6}
+.chart .avg{stroke:var(--ink);stroke-width:1;stroke-dasharray:4 3;opacity:.6}
+.chart .avgt{fill:var(--ink)}
+footer{font-size:11.5px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:no-preference){.big{transition:color .2s}}
+</style>
+
+<style>
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;min-height:100vh}
+[hidden]{display:none!important}
+[data-locked]{display:none!important}
+img{max-width:100%}
+.quick-lock{margin-top:8px;border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:7px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="card" id="lock" hidden>
+    <h2 class="h2">輸入密碼解鎖</h2>
+    <p class="hint">費率資料已加密。輸入一次後，這部手機會記住，之後離線也能用。</p>
+    <form id="lockf" class="field" autocomplete="off">
+      <label for="pass">密碼</label>
+      <div class="money"><input id="pass" type="password" autocomplete="current-password" style="text-align:left"></div>
+      <button class="chip" type="submit" aria-pressed="true" style="align-items:center;padding:10px">解鎖</button>
+      <p class="err" id="lockerr" hidden>密碼不正確，請再試。</p>
+    </form>
+  </section>
+  <header>
+    <h1>保費速查</h1>
+    <p>按保誠產品手冊費率計算 · 只供內部參考，正式報價以建議書為準</p>
+  </header>
+
+  <nav class="rail app-part" id="rail" aria-label="產品"></nav>
+
+  <section class="card" id="form" aria-label="投保資料"></section>
+
+  <section class="slip" id="slip" aria-live="polite"></section>
+
+  <section class="card" id="agecard" aria-labelledby="age-h">
+    <div>
+      <h2 id="age-h" class="h2">保費隨投保年齡變化</h2>
+      <p class="hint" id="age-sub"></p>
+    </div>
+    <div class="chart" id="chart"></div>
+    <div class="ledger compact" id="age-sum"></div>
+    <details class="tbl"><summary>顯示每歲數字</summary><div class="tblwrap" id="age-tbl"></div></details>
+  </section>
+
+  <section class="card" id="grcard" aria-labelledby="gr-h">
+    <div>
+      <h2 id="gr-h" class="h2">每年增長率與年齡</h2>
+      <p class="hint" id="gr-sub"></p>
+    </div>
+    <div class="chart" id="gchart"></div>
+    <div class="ledger compact" id="gr-sum"></div>
+  </section>
+  <section class="card">
+    <ul class="notes" id="notes"></ul>
+    <div class="src" id="src"></div>
+  </section>
+
+  <footer>費率取自保誠產品手冊（只供內部參考）。手冊版本見各產品來源。<br><button type="button" id="relock" class="quick-lock">鎖定並清除此手機的密碼</button></footer>
+</div>
+
+<script>
+let RATES;
+const MODES = [
+  {id:'A', name:'年繳', f:1.0000, n:1},
+  {id:'H', name:'半年繳', f:0.5150, n:2},
+  {id:'Q', name:'季繳', f:0.2620, n:4},
+  {id:'M', name:'月繳', f:0.0892, n:12},
+];
+const SINGLE = {id:'S', name:'整付', f:1, n:1};
+
+let CIM_DISC,LF_DISC,PL_DISC,PLCS_DISC,PLCS_RATE;
+function band(table,amt,term){let d=0;for(const [th,v] of table){if(amt>=th&&v[term]!=null)d=v[term];}return d;}
+
+const P = {
+  CIM3:{code:'CIM3',name:'誠保一生',amtLabel:'投保額',fields:['gender','smoker','cur','region'],terms:['5','10','15','20','25'],modes:true,
+    min:{USD:15000,HKD:120000},
+    rate(s){return RATES.cim3[s.cur+s.region+s.smoker]?.[s.gender]?.[s.term]?.[s.age-1];},
+    disc(s){return band(CIM_DISC[s.cur],s.amt,s.term);},
+    ageMax(s){return (RATES.cim3[s.cur+s.region+s.smoker][s.gender][s.term]||[]).length;},
+    notes:['保費不保證：公司可於每個保單周年日按風險級別劃一調整費率。','地區 A／B 見核保指引 7.1：香港身份證持有人一般為地區 A；中國內地人士一般為地區 B。','升級保障 CIME3 不另收保費。'],
+    src:'CIM3/BCIM3 產品手冊（2023-05-17）附錄 (i) 保費率；大額保費折扣見 4.1 產品基本資料。'},
+  BCIM3:{code:'BCIM3',name:'摯愛寶 孕婦',amtLabel:'投保額',fields:['cur','region'],terms:['10','15','20','25'],modes:false,annualOnly:true,noAge:true,
+    min:{USD:15000,HKD:120000},
+    rate(s){return RATES.bcim3[s.cur+s.region+'N']?.[s.term];},
+    disc(s){return band(CIM_DISC[s.cur],s.amt,s.term);},
+    notes:['費率不受胎兒性別及孕婦年齡影響。','投保時只接受年繳；孩子出生登記後才可改繳費方式。','孖胎須投保兩份保額相同的保單。','保費不保證，公司可於保單周年日調整。'],
+    src:'CIM3/BCIM3 產品手冊（2023-05-17）附錄 (i)「合資格孕婦」一行。'},
+  LFREE:{code:'LFREE',name:'自主未來',amtLabel:'投保額',fields:['gender','smoker'],curFixed:'USD',terms:['single','5','10','20','30'],modes:true,
+    min:{USD:10000},
+    rate(s){return RATES.lfree[s.gender+s.smoker]?.[s.term]?.[s.age-1];},
+    disc(s){return band(LF_DISC,s.amt,s.term);},
+    ageMax(s){return (RATES.lfree[s.gender+s.smoker][s.term]||[]).length;},
+    notes:['保額 20,000 美元起享大額折扣。','手冊另列 11–29 年的「遞增保障權益」費率，此處只計標準供款年期。'],
+    src:'LFREE 產品手冊（2024 年 10 月）附錄 2 保費率、附錄 3 大額保費率折扣表。'},
+  PLP2:{code:'PLP2',name:'美好人生 II',amtLabel:'投保額',fields:['gender','smoker','cur'],terms:['single','5','10','15','20','25','30'],modes:true,
+    min:{USD:20000,HKD:160000},
+    rate(s){return RATES.plp2[s.cur+s.gender+s.smoker]?.[s.term]?.[s.age-1];},
+    disc(s){return band(PL_DISC[s.cur],s.amt,s.term);},
+    ageMax(s){return (RATES.plp2[s.cur+s.gender+s.smoker][s.term]||[]).length;},
+    notes:['手冊為 2021 年 3 月版，費率可能已更新，報價前請以建議書核對。','保額 30,000 美元／240,000 港元起享大額折扣。'],
+    src:'PLP2 產品手冊（2021 年 3 月）附錄 2 保費表、附錄 3 大額保費率折扣表。'},
+  PLCS:{code:'PLCS',name:'息享人生',amtLabel:'名義金額',fields:[],curFixed:'USD',terms:['5','10'],modes:true,noAge:true,
+    min:{USD:5000},
+    rate(s){return PLCS_RATE[s.term];},
+    disc(s){return band(PLCS_DISC,s.amt,s.term);},
+    notes:['劃一費率，不論年齡、性別、吸煙。','名義金額 8,000 美元起享大額折扣。','手冊為 2021 年 3 月版，請以建議書核對。'],
+    src:'PLCS 產品手冊（2021 年 3 月）附錄 3 保費表、附錄 4 大額保費率折扣表。'},
+  EGIP:{code:'EGIP',name:'雋享入息傳承',amtLabel:'名義金額',fields:[],curFixed:'USD',terms:['3','5'],modes:true,noAge:true,
+    min:{USD:10000},
+    rate(s){return {3:1000/3,5:600/3}[s.term];},
+    disc(){return 0;},
+    notes:['每 3,000 美元名義金額：3 年供款年繳 1,000；5 年供款年繳 600（即名義金額＝已繳總保費）。','劃一費率，不設保費折扣。'],
+    src:'EGIP 產品手冊（2024 年 9 月）附錄 3 保費率、8 產品資料。'},
+  EGI:{code:'EGI',name:'雋享入息',amtLabel:'名義金額',fields:[],curFixed:'USD',terms:['single'],modes:false,noAge:true,
+    min:{USD:10000},
+    rate(){return 1000;}, disc(){return 0;},
+    notes:['整付保費＝名義金額，劃一費率，不設折扣。','同一受保人 EGM/EGM2/EGA/EGI/EGIP 累積名義金額上限 12,500,000 美元。'],
+    src:'EGI 產品手冊（2024 年 1 月）附錄 3 保費率。'},
+  PRMESP:{code:'PRMESP',name:'世譽財富',amtLabel:'名義金額',fields:[],curFixed:'USD',terms:['single'],modes:false,noAge:true,
+    min:{USD:10000},
+    rate(){return 1000;}, disc(){return 0;},
+    notes:['每 1,000 名義金額收 1,000 美元，劃一費率，不設折扣。'],
+    src:'PRMESP 產品手冊（2024 年 10 月）15 產品資料。'},
+  ENLIT:{code:'ENLIT',name:'啟耀未來',amtLabel:'名義金額',fields:[],curFixed:'USD',terms:['5'],modes:true,noAge:true,
+    min:{USD:20000},max:{USD:416000},
+    rate(){return 200;}, disc(){return 0;},
+    notes:['名義金額相等於標準總保費，5 年供款，即年繳＝名義金額 ÷ 5。','手冊沒有獨立費率表，此計法由「名義金額＝標準總保費」推算。','名義金額上限 416,000 美元。'],
+    src:'ENLIT 產品手冊（2026 年 1 月）8 產品資料。'},
+};
+const ORDER=['CIM3','BCIM3','LFREE','PLP2','PLCS','EGIP','EGI','PRMESP','ENLIT'];
+const TERMNAME=t=>t==='single'?'整付':t+' 年';
+
+let S = {prod:'CIM3',gender:'M',smoker:'N',cur:'USD',region:'A',term:'20',mode:'A',age:35,amt:100000};
+try{const v=JSON.parse(localStorage.getItem('pq-state')||'null');if(v&&P[v.prod])S={...S,...v};}catch(e){}
+function save(){try{localStorage.setItem('pq-state',JSON.stringify(S));}catch(e){}}
+
+const fmt=(x,d=2)=>x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const $=id=>document.getElementById(id);
+
+function renderRail(){
+  $('rail').innerHTML=ORDER.map(k=>`<button class="chip" type="button" data-p="${k}" aria-pressed="${S.prod===k}"><small>${P[k].code}</small>${P[k].name}</button>`).join('');
+  $('rail').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.prod=b.dataset.p;normalize();render();b.scrollIntoView({inline:'nearest',block:'nearest'});});
+}
+function seg(id,label,opts,val,dis){
+  return `<div class="field"><span class="lab" id="${id}-l">${label}</span><div class="seg" role="group" aria-labelledby="${id}-l">${opts.map(([v,t])=>`<button type="button" data-k="${id}" data-v="${v}" aria-pressed="${String(v)===String(val)}"${dis&&dis(v)?' disabled':''}>${t}</button>`).join('')}</div></div>`;
+}
+function normalize(){
+  const p=P[S.prod];
+  if(p.curFixed)S.cur=p.curFixed;
+  if(!p.terms.includes(S.term))S.term=p.terms.includes('20')?'20':p.terms[0];
+  if(S.term==='single'||!p.modes||p.annualOnly)S.mode=S.term==='single'?'S':'A';
+  else if(S.mode==='S')S.mode='A';
+}
+function renderForm(){
+  const p=P[S.prod]; const f=[];
+  const two=[];
+  if(p.fields.includes('gender'))two.push(seg('gender','性別',[['M','男'],['F','女']],S.gender));
+  if(p.fields.includes('smoker'))two.push(seg('smoker','吸煙',[['N','非吸煙'],['S','吸煙']],S.smoker));
+  if(two.length)f.push(`<div class="row2">${two.join('')}</div>`);
+  const two2=[];
+  if(p.fields.includes('cur'))two2.push(seg('cur','保單貨幣',[['USD','美元'],['HKD','港元']],S.cur));
+  if(p.fields.includes('region'))two2.push(seg('region','居住地區',[['A','地區 A'],['B','地區 B']],S.region));
+  if(two2.length)f.push(`<div class="row2">${two2.join('')}</div>`);
+  if(!p.noAge)f.push(`<div class="field"><label for="age">投保年齡（翌年歲／下次生日年齡）</label><div class="stepper"><button type="button" id="ageDn" aria-label="減一歲">−</button><input id="age" type="number" inputmode="numeric" min="1" max="75" value="${S.age}"><button type="button" id="ageUp" aria-label="加一歲">+</button></div></div>`);
+  f.push(seg('term','供款年期',p.terms.map(t=>[t,TERMNAME(t)]),S.term));
+  if(S.term!=='single'&&p.modes&&!p.annualOnly)f.push(seg('mode','繳費方式',MODES.map(m=>[m.id,m.name]),S.mode));
+  const cur=S.cur==='USD'?'USD':'HKD';
+  const qk=S.cur==='USD'?[50000,100000,200000,500000]:[400000,800000,1600000,4000000];
+  f.push(`<div class="field"><label for="amt">${p.amtLabel}</label><div class="money"><span>${cur}</span><input id="amt" type="text" inputmode="numeric" autocomplete="off" value="${S.amt.toLocaleString('en-US')}"></div><div class="quick">${qk.map(q=>`<button type="button" data-q="${q}">${q>=1e6?q/1e6+'M':q/1e3+'K'}</button>`).join('')}</div></div>`);
+  $('form').innerHTML=f.join('');
+  $('form').querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{S[b.dataset.k]=b.dataset.v;normalize();render();});
+  $('form').querySelectorAll('.quick button').forEach(b=>b.onclick=()=>{S.amt=+b.dataset.q;$('amt').value=S.amt.toLocaleString('en-US');calc();});
+  const a=$('age');
+  if(a){a.oninput=()=>{const v=parseInt(a.value,10);if(v>0){S.age=v;calc();}};
+    $('ageDn').onclick=()=>{S.age=Math.max(1,S.age-1);a.value=S.age;calc();};
+    $('ageUp').onclick=()=>{S.age=Math.min(75,S.age+1);a.value=S.age;calc();};}
+  const m=$('amt');
+  m.oninput=()=>{const raw=m.value.replace(/[^\d]/g,'');S.amt=raw?parseInt(raw,10):0;calc();};
+  m.onblur=()=>{m.value=S.amt?S.amt.toLocaleString('en-US'):'';};
+}
+function calc(){
+  save(); renderAge();
+  const p=P[S.prod]; const cur=S.cur; const sym=cur==='USD'?'USD':'HKD';
+  const errs=[];
+  const min=p.min?.[cur]; if(min&&S.amt<min)errs.push(`${p.amtLabel}最低 ${sym} ${min.toLocaleString('en-US')}。`);
+  const max=p.max?.[cur]; if(max&&S.amt>max)errs.push(`${p.amtLabel}最高 ${sym} ${max.toLocaleString('en-US')}。`);
+  const rate=p.rate(S);
+  if(!p.noAge&&(rate==null)){
+    const mx=p.ageMax?p.ageMax(S):0;
+    errs.unshift(mx?`${TERMNAME(S.term)}供款只接受翌年歲 1–${mx} 歲投保。`:'此組合沒有費率。');
+  }
+  if(errs.length&&(rate==null||!S.amt)){$('slip').innerHTML=errs.map(e=>`<div class="err">${e}</div>`).join('');renderNotes();return;}
+  const disc=p.disc(S)||0;
+  const net=rate-disc;
+  const annual=S.amt/1000*net;
+  const mode=S.term==='single'?SINGLE:MODES.find(m=>m.id===S.mode);
+  const inst=annual*mode.f;
+  const years=S.term==='single'?1:+S.term;
+  const total=inst*mode.n*years;
+  const perLabel=S.term==='single'?'整付保費':`每期保費（${mode.name}）`;
+  $('slip').innerHTML=`
+    ${errs.map(e=>`<div class="err">${e}</div>`).join('')}
+    <div><div class="k">${perLabel}</div><div class="big">${fmt(inst)}<small>${sym}</small></div></div>
+    <div class="ledger">
+      <div><span>每 1,000 ${p.amtLabel}費率</span><b>${fmt(rate)}</b></div>
+      <div><span>大額保費折扣</span><b>${disc?'− '+fmt(disc):'—'}</b></div>
+      <div><span>淨費率</span><b>${fmt(net)}</b></div>
+      ${S.term==='single'?'':`<div><span>年繳保費（基準）</span><b>${fmt(annual)}</b></div>`}
+      ${S.term==='single'||mode.id==='A'?'':`<div><span>繳費系數</span><b>× ${mode.f.toFixed(4)}</b></div>`}
+      <div><span>${S.term==='single'?'總保費':`${years} 年總保費`}</span><b>${fmt(total)}</b></div>
+    </div>
+    <p class="formula">${S.amt.toLocaleString('en-US')} ÷ 1,000 × ${fmt(net)}${S.term==='single'||mode.id==='A'?'':' × '+mode.f.toFixed(4)} = ${fmt(inst)}</p>`;
+  renderNotes();
+}
+function renderNotes(){
+  const p=P[S.prod];
+  $('notes').innerHTML=[...p.notes,'未計保費徵費及附加保障；四捨五入以建議書為準。'].map(n=>`<li>${n}</li>`).join('');
+  $('src').textContent='來源：'+p.src;
+}
+function ageSeries(){
+  const p=P[S.prod]; if(p.noAge) return null;
+  const out=[];
+  for(let a=1;a<=75;a++){
+    const r=p.rate({...S,age:a}); if(r==null) continue;
+    const net=r-(p.disc({...S,age:a})||0);
+    out.push({a,annual:S.amt/1000*net});
+  }
+  out.forEach((d,i)=>{const pr=out[i-1];d.g=(pr&&pr.a===d.a-1)?(d.annual/pr.annual-1)*100:null;});
+  return out.length?out:null;
+}
+const gp=v=>(v>=0?'+':'')+v.toFixed(1)+'%';
+function renderAge(){
+  const card=$('agecard'); const p=P[S.prod]; const ser=ageSeries();
+  if(!ser||!S.amt){card.hidden=true;renderGrowth(null);return;} card.hidden=false;
+  const sym=S.cur==='USD'?'USD':'HKD';
+  const mode=S.term==='single'?SINGLE:MODES.find(m=>m.id===S.mode);
+  const years=S.term==='single'?1:+S.term;
+  const tot=x=>x*mode.f*mode.n*years;
+  const desc=[p.fields.includes('gender')?(S.gender==='M'?'男':'女'):null,p.fields.includes('smoker')?(S.smoker==='N'?'非吸煙':'吸煙'):null,
+    p.fields.includes('cur')?(S.cur==='USD'?'美元':'港元'):null,p.fields.includes('region')?'地區 '+S.region:null,TERMNAME(S.term)+'供款',
+    `${p.amtLabel} ${S.amt.toLocaleString('en-US')}`].filter(Boolean).join(' · ');
+  $('age-sub').textContent=`${p.code} ${p.name} · ${desc}。${S.term==='single'?'整付保費':'年繳保費'}，按翌年歲。`;
+  // chart
+  const W=340,H=190,L=46,R=10,T=10,B=24;
+  const a0=ser[0].a,a1=ser[ser.length-1].a;
+  const maxV=Math.max(...ser.map(d=>d.annual));
+  const step=(()=>{const raw=maxV/4;const m=Math.pow(10,Math.floor(Math.log10(raw)));for(const k of[1,2,2.5,5,10]){if(k*m>=raw)return k*m;}return 10*m;})();
+  const yMax=Math.ceil(maxV/step)*step;
+  const x=a=>L+(a1===a0?0:(a-a0)/(a1-a0))*(W-L-R);
+  const y=v=>T+(1-v/yMax)*(H-T-B);
+  const short=v=>v>=1e6?(v/1e6).toFixed(v%1e6?1:0)+'M':v>=1e3?(v/1e3).toFixed(v%1e3?1:0)+'K':String(v);
+  let g='';
+  for(let v=0;v<=yMax+1e-9;v+=step){g+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L-6}" y="${y(v)+3.5}" text-anchor="end">${short(v)}</text>`;}
+  const xt=[];for(let a=Math.ceil(a0/10)*10;a<=a1;a+=10)xt.push(a); if(!xt.includes(a0))xt.unshift(a0); if(a1-xt[xt.length-1]>=4)xt.push(a1);
+  g+=xt.map(a=>`<text class="axis" x="${x(a)}" y="${H-6}" text-anchor="middle">${a}</text>`).join('');
+  const pts=ser.map(d=>`${x(d.a).toFixed(1)},${y(d.annual).toFixed(1)}`).join(' ');
+  const area=`${x(a0)},${y(0)} ${pts} ${x(a1)},${y(0)}`;
+  const cur=ser.find(d=>d.a===S.age);
+  $('chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${p.code} 各投保年齡的保費走勢">${g}
+    <polygon class="area" points="${area}"/><polyline class="ln" points="${pts}"/>
+    ${cur?`<circle class="me" cx="${x(cur.a)}" cy="${y(cur.annual)}" r="5"/>`:''}
+    <line class="xh" id="xh" y1="${T}" y2="${H-B}" visibility="hidden"/><circle class="hd" id="hd" r="4.5" visibility="hidden"/>
+    <rect x="${L}" y="0" width="${W-L-R}" height="${H}" fill="transparent" id="hit"/></svg><div class="tip" id="tip" hidden></div>`;
+  const svg=$('chart').querySelector('svg'), tip=$('tip');
+  const show=e=>{
+    const r=svg.getBoundingClientRect(); const sx=(e.clientX-r.left)*W/r.width;
+    const a=Math.round(a0+(Math.min(Math.max(sx,L),W-R)-L)/(W-L-R)*(a1-a0));
+    const d=ser.find(z=>z.a===a)||ser.reduce((m,z)=>Math.abs(z.a-a)<Math.abs(m.a-a)?z:m);
+    const X=x(d.a),Y=y(d.annual);
+    $('xh').setAttribute('x1',X);$('xh').setAttribute('x2',X);$('xh').setAttribute('visibility','visible');
+    $('hd').setAttribute('cx',X);$('hd').setAttribute('cy',Y);$('hd').setAttribute('visibility','visible');
+    tip.hidden=false; tip.innerHTML=`${d.a} 歲　${S.term==='single'?'整付':'年繳'} <b>${fmt(d.annual)}</b>${d.g!=null?`　比上一歲 <b>${gp(d.g)}</b>`:''}<br>${S.term==='single'?'':`${years} 年總保費 <b>${fmt(tot(d.annual))}</b>`}`;
+    const px=X/W*r.width; const tw=tip.offsetWidth; tip.style.left=Math.min(Math.max(px,tw/2),r.width-tw/2)+'px';
+  };
+  const hide=()=>{tip.hidden=true;$('xh').setAttribute('visibility','hidden');$('hd').setAttribute('visibility','hidden');};
+  svg.addEventListener('pointermove',show); svg.addEventListener('pointerdown',show); svg.addEventListener('pointerleave',hide);
+  // summary
+  const first=ser[0], last=ser[ser.length-1];
+  const later=cur?ser.find(d=>d.a===cur.a+5):null;
+  const pct=(a,b)=>((b/a-1)*100).toFixed(0)+'%';
+  const rows=[`<div><span>最年輕（${first.a} 歲）</span><b>${fmt(first.annual)}</b></div>`];
+  if(cur)rows.push(`<div><span>現在選的 ${cur.a} 歲</span><b>${fmt(cur.annual)}</b></div>`);
+  if(later)rows.push(`<div><span>遲 5 年（${later.a} 歲）投保</span><b>${fmt(later.annual)}　+${pct(cur.annual,later.annual)}</b></div>`);
+  if(cur&&later&&S.term!=='single')rows.push(`<div><span>總保費差額（${years} 年）</span><b>+${fmt(tot(later.annual)-tot(cur.annual))}</b></div>`);
+  const cagr=(Math.pow(last.annual/first.annual,1/(last.a-first.a))-1)*100;
+  if(cur&&cur.g!=null)rows.push(`<div><span>${cur.a} 歲比 ${cur.a-1} 歲</span><b>${gp(cur.g)}</b></div>`);
+  if(cur&&later)rows.push(`<div><span>${cur.a}→${later.a} 歲平均每年</span><b>${gp((Math.pow(later.annual/cur.annual,1/5)-1)*100)}</b></div>`);
+  rows.push(`<div><span>${first.a}→${last.a} 歲平均每年</span><b>${gp(cagr)}</b></div>`);
+  rows.push(`<div><span>最高可投保（${last.a} 歲）</span><b>${fmt(last.annual)}　${(last.annual/first.annual).toFixed(1)} 倍</b></div>`);
+  $('age-sum').innerHTML=rows.join('');
+  $('age-tbl').innerHTML=`<table><thead><tr><th>翌年歲</th><th>${S.term==='single'?'整付':'年繳'}（${sym}）</th><th>每年增長</th>${S.term==='single'?'':`<th>${years} 年總保費</th>`}</tr></thead><tbody>${ser.map(d=>`<tr${d.a===S.age?' class="cur"':''}><td>${d.a}</td><td>${fmt(d.annual)}</td><td>${d.g==null?'—':gp(d.g)}</td>${S.term==='single'?'':`<td>${fmt(tot(d.annual))}</td>`}</tr>`).join('')}</tbody></table>`;
+  renderGrowth(ser);
+}
+
+function renderGrowth(ser){
+  const card=$('grcard');
+  const gs=(ser||[]).filter(d=>d.g!=null);
+  if(gs.length<2){card.hidden=true;return;} card.hidden=false;
+  const p=P[S.prod];
+  $('gr-sub').textContent=`每一歲比上一歲${S.term==='single'?'整付':'年繳'}保費貴多少（%）。同一組合：${$('age-sub').textContent.split('。')[0]}。`;
+  const W=340,H=190,L=40,R=10,T=12,B=24;
+  const a0=gs[0].a,a1=gs[gs.length-1].a;
+  const mx=Math.max(...gs.map(d=>d.g)), mn=Math.min(0,...gs.map(d=>d.g));
+  const step=(()=>{const raw=(mx-mn)/4;const m=Math.pow(10,Math.floor(Math.log10(raw||1)));for(const k of[1,2,2.5,5,10]){if(k*m>=raw)return k*m;}return 10*m;})();
+  const yMax=Math.ceil(mx/step)*step, yMin=Math.floor(mn/step)*step;
+  const n=a1-a0+1, bw=(W-L-R)/n;
+  const x=a=>L+(a-a0)*bw;
+  const y=v=>T+(yMax-v)/(yMax-yMin)*(H-T-B);
+  let g='';
+  for(let v=yMin;v<=yMax+1e-9;v+=step){g+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L-6}" y="${y(v)+3.5}" text-anchor="end">${+v.toFixed(1)}%</text>`;}
+  const xt=[];for(let a=Math.ceil(a0/10)*10;a<=a1;a+=10)xt.push(a); if(!xt.includes(a0))xt.unshift(a0); if(a1-xt[xt.length-1]>=4)xt.push(a1);
+  g+=xt.map(a=>`<text class="axis" x="${x(a)+bw/2}" y="${H-6}" text-anchor="middle">${a}</text>`).join('');
+  const gap=bw>4?1:0.4;
+  const bars=gs.map(d=>{const y0=y(0),y1=y(d.g);const top=Math.min(y0,y1),h=Math.max(Math.abs(y1-y0),1);
+    return `<rect class="bar${d.a===S.age?' on':''}" data-a="${d.a}" x="${(x(d.a)+gap/2).toFixed(2)}" y="${top.toFixed(2)}" width="${Math.max(bw-gap,1).toFixed(2)}" height="${h.toFixed(2)}" rx="${Math.min(2,bw/3).toFixed(2)}"/>`;}).join('');
+  const avg=gs.reduce((s,d)=>s+d.g,0)/gs.length;
+  $('gchart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${p.code} 各年齡每年保費增長率">${g}${bars}
+    <line class="avg" x1="${L}" x2="${W-R}" y1="${y(avg)}" y2="${y(avg)}"/>
+    <rect x="${L}" y="0" width="${W-L-R}" height="${H}" fill="transparent"/></svg><div class="tip" id="gtip" hidden></div>`;
+  const svg=$('gchart').querySelector('svg'), tip=$('gtip');
+  const show=e=>{const r=svg.getBoundingClientRect();const sx=(e.clientX-r.left)*W/r.width;
+    const a=Math.min(a1,Math.max(a0,Math.floor((sx-L)/bw)+a0)); const d=gs.find(z=>z.a===a); if(!d)return;
+    svg.querySelectorAll('.bar.hv').forEach(z=>z.classList.remove('hv')); svg.querySelector(`.bar[data-a="${a}"]`)?.classList.add('hv');
+    tip.hidden=false; tip.innerHTML=`${d.a-1} → ${d.a} 歲　<b>${gp(d.g)}</b><br>${fmt(ser.find(z=>z.a===d.a-1).annual)} → ${fmt(d.annual)}`;
+    const px=(x(a)+bw/2)/W*r.width, tw=tip.offsetWidth; tip.style.left=Math.min(Math.max(px,tw/2),r.width-tw/2)+'px';};
+  svg.addEventListener('pointermove',show); svg.addEventListener('pointerdown',show);
+  svg.addEventListener('pointerleave',()=>{tip.hidden=true;svg.querySelectorAll('.bar.hv').forEach(z=>z.classList.remove('hv'));});
+  const top3=[...gs].sort((a,b)=>b.g-a.g).slice(0,3);
+  const low=gs.reduce((m,d)=>d.g<m.g?d:m);
+  const seg=(lo,hi)=>{const z=gs.filter(d=>d.a>=lo&&d.a<=hi);return z.length?gp(z.reduce((s,d)=>s+d.g,0)/z.length):'—';};
+  const rows=[];
+  const bands=[[2,20],[21,30],[31,40],[41,50],[51,60],[61,75]].filter(([lo,hi])=>gs.some(d=>d.a>=lo&&d.a<=hi));
+  bands.forEach(([lo,hi])=>{const h2=Math.min(hi,a1),l2=Math.max(lo,a0);rows.push(`<div><span>${l2}–${h2} 歲平均</span><b>${seg(lo,hi)}</b></div>`);});
+  rows.unshift(`<div><span>整體平均（虛線）</span><b>${gp(avg)}</b></div>`);
+  const hi=top3[0]; const ties=gs.filter(d=>Math.abs(d.g-hi.g)<0.05).map(d=>d.a);
+  rows.push(`<div><span>升幅最大</span><b>${ties.length>2?ties[0]+'–'+ties[ties.length-1]:ties.join('、')} 歲 ${gp(hi.g)}</b></div>`);
+  const lt=gs.filter(d=>Math.abs(d.g-low.g)<0.05).map(d=>d.a);
+  rows.push(`<div><span>升幅最小</span><b>${lt.length>2?lt[0]+'–'+lt[lt.length-1]:lt.join('、')} 歲 ${gp(low.g)}</b></div>`);
+  $('gr-sum').innerHTML=rows.join('');
+}
+function render(){renderRail();renderForm();calc();}
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+let ENC=null;
+async function getEnc(){if(!ENC)ENC=await (await fetch('data.enc.json',{cache:'no-cache'})).json().catch(async()=>await (await fetch('data.enc.json')).json());return ENC;}
+async function tryKey(raw){const enc=await getEnc();
+  const key=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(enc.iv)},key,b64(enc.ct));
+  return JSON.parse(new TextDecoder().decode(pt));}
+async function derive(pass){const enc=await getEnc();
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:b64(enc.salt),iterations:enc.iter},base,256));}
+function setApp(on){document.querySelectorAll('.wrap > *:not(header):not(#lock)').forEach(el=>{if(on)el.removeAttribute('data-locked');else el.setAttribute('data-locked','');});$('lock').hidden=on;}
+function start(D){({RATES,CIM_DISC,LF_DISC,PL_DISC,PLCS_DISC,PLCS_RATE}=D);setApp(true);normalize();render();}
+(async()=>{
+  setApp(false);
+  try{const k=localStorage.getItem('pq-key');if(k){start(await tryKey(b64(k)));return;}}catch(e){}
+  $('lock').hidden=false;
+})();
+$('lockf').addEventListener('submit',async ev=>{ev.preventDefault();$('lockerr').hidden=true;
+  const btn=ev.target.querySelector('button');btn.textContent='解鎖中…';
+  try{const raw=await derive($('pass').value);const D=await tryKey(raw);
+    try{localStorage.setItem('pq-key',btoa(String.fromCharCode(...raw)));}catch(e){}
+    $('pass').value='';start(D);}
+  catch(e){$('lockerr').hidden=false;}
+  btn.textContent='解鎖';});
+$('relock').onclick=()=>{try{localStorage.removeItem('pq-key');}catch(e){}location.reload();};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+
+</body>
+</html>
