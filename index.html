@@ -243,13 +243,19 @@ const P = {
     rate(){return 1000;}, disc(){return 0;},
     notes:['每 1,000 名義金額收 1,000 美元，劃一費率，不設折扣。'],
     src:'PRMESP 產品手冊（2024 年 10 月）15 產品資料。'},
+  TRST:{code:'TRST',name:'信守明天',amtLabel:'名義金額',fields:['cur'],terms:['3','5'],modes:true,noAge:true,
+    min:{USD:10000,HKD:80000},
+    rate(s){return {3:323.8,5:200}[s.term];},
+    disc(s){return s.amt>=(s.cur==='USD'?1000000:8000000)?this.rate(s)*0.01:0;},
+    notes:['劃一保證費率：每 1,000 名義金額 3 年繳 323.8、5 年繳 200，不論年齡、性別、吸煙。','名義金額 ≥ 1,000,000 美元／8,000,000 港元，整個供款期保費減 1%。','另有人民幣、澳元、加元、英鎊保單（澳元／加元／英鎊只接受年繳），此處只計美元及港元。','投保年齡 1–80 歲（翌年歲）。'],
+    src:'TRST 產品手冊（2026 年 1 月 v3.4）附錄 C 保費率、基本資料（保費率折扣）。'},
   ENLIT:{code:'ENLIT',name:'啟耀未來',amtLabel:'名義金額',fields:[],curFixed:'USD',terms:['5'],modes:true,noAge:true,
     min:{USD:20000},max:{USD:416000},
     rate(){return 200;}, disc(){return 0;},
     notes:['名義金額相等於標準總保費，5 年供款，即年繳＝名義金額 ÷ 5。','手冊沒有獨立費率表，此計法由「名義金額＝標準總保費」推算。','名義金額上限 416,000 美元。'],
     src:'ENLIT 產品手冊（2026 年 1 月）8 產品資料。'},
 };
-const ORDER=['CIM3','CIE3','MCVIP','BCIM3','LFREE','PLP2','PLCS','EGIP','EGI','PRMESP','ENLIT'];
+const ORDER=['CIM3','CIE3','MCVIP','BCIM3','LFREE','PLP2','PLCS','EGIP','EGI','PRMESP','TRST','ENLIT'];
 const TERMNAME=t=>t==='single'?'整付':t==='life'?'每年續保':t+' 年';
 
 let S = {prod:'CIM3',gender:'M',smoker:'N',cur:'USD',region:'A',term:'20',mode:'A',age:35,amt:100000,plan:'3',ded:'Z',opd:'N'};
