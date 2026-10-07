@@ -281,11 +281,59 @@ const P = {
     notes:['名義金額相等於標準總保費，5 年供款，即年繳＝名義金額 ÷ 5。','手冊沒有獨立費率表，此計法由「名義金額＝標準總保費」推算。','名義金額上限 416,000 美元。'],
     src:'ENLIT 產品手冊（2026 年 1 月）8 產品資料。'},
 };
-const ORDER=['CIM3','CIE3','ENCASH','MCVIP','LFRE2','PVPP','BCIM3','LFREE','PLP2','PLCS','EGIP','EGI','PRMESP','TRST','PACE','ENLIT'];
-const TERMNAME=t=>t==='single'?'整付':t==='life'?'每年續保':t+' 年';
+
+// ---- generic table-driven products (RATES.gen) ----
+let GEN={};
+function gdv(code,dm){S.gd=S.gd||{};const o=S.gd[code]||(S.gd[code]={});if(!dm.options.some(x=>x[0]===o[dm.key]))o[dm.key]=dm.options[0][0];return o[dm.key];}
+function gget(code,s,src){const sp=GEN[code];if(!sp)return null;let d=(src||sp.data)[s.cur],conv=1;
+  if(!d){if(sp.same)d=(src||sp.data)[sp.curs[0]];else if(sp.conv&&sp.conv[s.cur]){d=(src||sp.data).HKD;conv=1/sp.conv[s.cur];}}
+  for(const dm of sp.dims){if(d==null)return null;d=dm.key==='term'?d[s.term]:d[gdv(code,dm)];}
+  if(!Array.isArray(d))return null;const v=d[s.age-1];return v==null?null:v*conv;}
+const GMETA={
+ MLP:{name:'終身保醫療',notes:['附加保障；投保 1–75 歲，76–100 歲只供續保。','額外醫療計劃（SMM）終身限額 1,200,000 港元，由 75 歲後首個保單周年日起適用。','美元保費 = 港元 ÷ 8（保費表註明）。保費每年按當時年齡調整，非保證。'],src:'MLP 保費表（2026-10-01 起生效）；2024 MLP 產品手冊。'},
+ HTPR:{name:'智安心康健',notes:['自付額以每次住院計算：25,000／50,000／80,000 港元；80,000 只適用於半私家及私家病房。','新投保 1–65 歲，66–100 歲只供續保。','美元保費 = 港元 ÷ 8。保費每年調整，非保證。'],src:'HTPR 保費表（2026-10-01 起生效）。'},
+ PMP:{name:'醫療加倍保',notes:['此表為地區 A（香港居民）；地區 B（中國內地人士）未收錄。','計劃二只設 0 自付額。新投保 1–70 歲，71–100 歲只供續保。','美元保費 = 港元 ÷ 8。保費每年調整，非保證。'],src:'PMP 保費表（2026-10-01 起生效）；2023 PMP 產品手冊。'},
+ PPM:{name:'摯為您優悅醫療',notes:['只有地區 A、全球（美國除外）保費表；全球保障選項已於 2024-07-05 停售。','新投保 1–70 歲；門診保障不適用於中國內地客戶，表列至 99 歲。','美元保費 = 港元 ÷ 8。保費每年調整，非保證。'],src:'PPM 保費表（2026-10-01 起生效）；2024 PPM 產品手冊。',addonLabel:'門診保障'},
+ CP:{name:'癌症全護',notes:['附加保障；新投保 1–65 歲，66–100 歲只供續保。','地區 B 為中國內地人士。','美元保費 = 港元 ÷ 8。2024–2026 年費率相同；保費每年調整，非保證。'],src:'2026 醫療續保保費表（CP，與 2024／2025 相同）；CP 產品手冊。'},
+ CPE:{name:'特選危疾治療',notes:['計劃一只限附加保障。作基本計劃須另付保單費用：年繳 240 港元（30 美元）。','新投保 1–65 歲，66–100 歲只供續保；地區 B 為中國內地人士。','美元保費 = 港元 ÷ 8。保費每年調整，非保證。'],src:'CPE 保費表（2025-12，地區 A／B）；2026 續保保費表；CPE 產品手冊。'},
+ VSP:{name:'自主醫保',notes:['只有港元；每年最高保障 420,000 港元，不設自付額。','新投保 1–81 歲，82–100 歲只供續保。','保費每年按當時年齡調整，非保證；可扣稅（每受保人上限 8,000 港元）。'],src:'VSP 保費表（2026-10-01 起生效）；VHIS 產品手冊 2020-09。'},
+ VIP:{name:'自願醫保尚賓',notes:['基本計劃 VIP 與附加保障 VIPR 保費相同；不分性別。','每年限額 12,000,000 港元，終身 56,000,000 港元。','新投保 1–81 歲，82 歲以上只供續保。港元表 = 美元表 × 8。'],src:'VIP 保費表（2026-10-01 起生效）；2023 VIP 優化手冊。'},
+ VEP:{name:'自願醫保摯稱心',notes:['基本計劃；已包括額外醫療計劃（SMM）。','新投保 1–81 歲，82 歲以上只供續保。港元表與美元表分別列出（約 × 7.75）。','保費每年調整，非保證。'],src:'VEP 保費表（2026-10-01 起生效）；VEP 產品手冊。'},
+ VFP:{name:'靈活自主醫保',notes:['此表為附加保障 VFPR（基本計劃 VFP 只限續保）。','私家病房只有「不附加」或「附加」額外醫療計劃（選項 1 欄）。','新投保 1–81 歲。港元表與美元表分別列出（約 × 7.75）。保費每年調整，非保證。'],src:'VFP 保費表（2026-10-01 起生效）；2024 VFP 產品手冊。'},
+ ECI:{name:'自主健康危疾',notes:['供款至 66 歲：投保 1–55 歲；至 86 歲：投保 1–65 歲。吸煙級別 19 歲起。','保單費用另計：年繳 35／半年 18／季 10／月 3.5 美元（已加入計算）。','最低保額 25,000 美元；不設大額折扣。保費不保證。'],src:'ECI/ECM/ECS 產品手冊（2022-01-06）附錄 (ii) 保費表。'},
+ CIP2:{name:'危疾首護 II',notes:['供款 10–30 年；投保年齡上限：10 年 65、15 年 60、20 年 55、25 年 50、30 年 45 歲。','保額 200,000 美元／1,600,000 港元起享大額折扣。','手冊 2021-06 版，保費不保證，請以建議書核對。'],src:'CIP2 產品手冊（2021-06）附錄 2 保費率、大額保費折扣表。'},
+ CRC:{name:'癌症痊癒保',notes:['供癌症康復者投保；級別 1 原位癌，級別 2 第 1–3 期癌症。','投保 19–65 歲，每年按當時年齡續保至 75 歲（手冊只列 19–65 歲費率）。','保額 50,000–250,000 美元；美元與港元費率相同。手冊 2019 版。'],src:'CRC 產品手冊（2019-02）附錄 3 保費率。'},
+ C360:{name:'癌症保障 360',notes:['每年按當時年齡續保至 81 歲；投保 1–65 歲。','美元與港元費率相同；不設大額折扣。','保額上限：50 歲或以下 187,500 美元，以上 100,000 美元。手冊 2021-06 版。'],src:'C360 產品手冊（2021-06）附錄 3 保費率（基本計劃）。'},
+ CIT2:{name:'危疾定期保 II',notes:['基本計劃；每年按當時年齡續保至 80 歲，投保 19–65 歲。','美元與港元費率相同；大額折扣未計入，請以建議書為準。','手冊 2019-08 版，保費不保證。'],src:'PLT/CIT2 產品手冊（2019-08）附錄 1 保費率（CIT2 基本計劃）。'},
+};
+function initGen(){GEN=RATES.gen||{};
+for(const [code,meta] of Object.entries(GMETA)){const sp=GEN[code];if(!sp)continue;
+  const termDim=sp.dims.find(d=>d.key==='term');
+  const base={code,name:meta.name,gen:code,fields:sp.curs.length>1?['cur']:[],curFixed:sp.curs.length>1?null:sp.curs[0],modes:true,ageTop:sp.ageMax,newMax:sp.newMax,notes:meta.notes,src:meta.src};
+  if(sp.kind==='flat'){
+    P[code]={...base,amtLabel:'',flat:true,terms:['life'],
+      annual(s){const v=gget(code,s);if(v==null)return null;if(sp.addon&&(S.gd?.[code]?.addon==='Y')){const arr=sp.addon.rates[s.cur]||sp.addon.rates.HKD;const cv=sp.addon.rates[s.cur]?1:(sp.conv?.[s.cur]?1/sp.conv[s.cur]:1);const a=arr[s.age-1];return a==null?v:v+a*cv;}return v;},
+      base(s){return gget(code,s);},addonLabel:meta.addonLabel,
+      nullMsg:`此組合在 ${sp.ageMin||1}–${sp.ageMax} 歲沒有費率，請改選項。`};
+  } else {
+    const terms=termDim?termDim.options.map(o=>o[0]):[sp.renew?'life':'renewY'];
+    P[code]={...base,amtLabel:'投保額',terms,min:sp.min,max:sp.max,renew:sp.renew||!termDim,ageTop:sp.ageMax,
+      rate(s){return gget(code,s);},
+      disc(s){const dc=sp.disc;if(!dc)return 0;const th=dc[s.cur]||[];let i=-1;th.forEach((x,k)=>{if(s.amt>=x)i=k;});if(i<0)return 0;
+        const t=+s.term;const k=t===10?'10':t<=15?'11-15':t<=20?'16-20':t<=25?'21-25':'26-30';return dc.byTerm[k][i];},
+      ageMax(s){let d=sp.data[s.cur]||sp.data[sp.curs[0]];for(const dm of sp.dims){d=dm.key==='term'?d?.[s.term]:d?.[gdv(code,dm)];}return Array.isArray(d)?d.length:0;},
+      policyFee:sp.policyFee,ageMsg(s){const n=this.ageMax(s);return n?`此組合只接受翌年歲 ${sp.ageMin||1}–${n} 歲（較年幼或部分年期組合沒有費率）。`:'此組合沒有費率。';}};
+  }
+}
+ORDER=ORDER_ALL.filter(k=>P[k]);
+}
+
+const ORDER_ALL=['CIM3','CIE3','CIP2','ECI','CRC','C360','CIT2','ENCASH','MCVIP','VIP','VFP','VEP','VSP','MLP','PMP','PPM','HTPR','CP','CPE','LFRE2','PVPP','BCIM3','LFREE','PLP2','PLCS','EGIP','EGI','PRMESP','TRST','PACE','ENLIT'];
+let ORDER=ORDER_ALL.filter(k=>P[k]);
+const TERMNAME=t=>t==='single'?'整付':t==='life'||t==='renewY'?'每年續保':(t==='66'||t==='86')?'至 '+t+' 歲':t+' 年';
 
 let S = {prod:'CIM3',gender:'M',smoker:'N',cur:'USD',region:'A',term:'20',mode:'A',age:35,amt:100000,plan:'3',ded:'Z',opd:'N',pcls:'STN',pregion:'A+'};
-try{const v=JSON.parse(localStorage.getItem('pq-state')||'null');if(v&&P[v.prod])S={...S,...v};}catch(e){}
+try{const v=JSON.parse(localStorage.getItem('pq-state')||'null');if(v&&(P[v.prod]||ORDER_ALL.includes(v.prod)))S={...S,...v};}catch(e){}
 function save(){try{localStorage.setItem('pq-state',JSON.stringify(S));}catch(e){}}
 
 const fmt=(x,d=2)=>x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -320,6 +368,8 @@ function renderForm(){
   if(p.fields.includes('plan'))f.push(seg('plan','計劃級別',[['1','計劃一 大中華'],['2','計劃二 大中華'],['3','計劃三 全球除美'],['4','計劃四 全球']],S.plan));
   if(p.fields.includes('ded'))f.push(seg('ded','自付額',[['Z','0'],['D','內地 1 萬／境外 3 萬港元']],S.plan==='1'?'D':S.ded,v=>S.plan==='1'&&v==='Z'));
   if(p.fields.includes('opd'))f.push(seg('opd','門診寶（指定附加保障）',[['N','不附加'],['Y','附加']],S.opd));
+  if(p.gen){const sp=GEN[p.gen];sp.dims.filter(d=>d.key!=='term').forEach(dm=>{f.push(seg('g_'+dm.key,dm.label,dm.options,gdv(p.gen,dm)));});
+    if(sp.addon){S.gd[p.gen].addon=S.gd[p.gen].addon||'N';f.push(seg('g_addon',sp.addon.label,[['N','不附加'],['Y','附加']],S.gd[p.gen].addon));}}
   const AT=p.ageTop||75;
   if(!p.noAge)f.push(`<div class="field"><label for="age">投保年齡（翌年歲／下次生日年齡）</label><div class="stepper"><button type="button" id="ageDn" aria-label="減一歲">−</button><input id="age" type="number" inputmode="numeric" min="1" max="${AT}" value="${S.age}"><button type="button" id="ageUp" aria-label="加一歲">+</button></div></div>`);
   if(p.terms.length>1||!p.flat)f.push(seg('term','供款年期',p.terms.map(t=>[t,TERMNAME(t)]),S.term));
@@ -328,7 +378,7 @@ function renderForm(){
   const qk=S.cur==='USD'?[50000,100000,200000,500000]:[400000,800000,1600000,4000000];
   if(!p.flat)f.push(`<div class="field"><label for="amt">${p.amtLabel}</label><div class="money"><span>${cur}</span><input id="amt" type="text" inputmode="numeric" autocomplete="off" value="${S.amt.toLocaleString('en-US')}"></div><div class="quick">${qk.map(q=>`<button type="button" data-q="${q}">${q>=1e6?q/1e6+'M':q/1e3+'K'}</button>`).join('')}</div></div>`);
   $('form').innerHTML=f.join('');
-  $('form').querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{S[b.dataset.k]=b.dataset.v;normalize();render();});
+  $('form').querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(k.startsWith('g_')){S.gd[p.gen][k.slice(2)]=b.dataset.v;}else S[k]=b.dataset.v;normalize();render();});
   $('form').querySelectorAll('.quick button').forEach(b=>b.onclick=()=>{S.amt=+b.dataset.q;$('amt').value=S.amt.toLocaleString('en-US');calc();});
   const a=$('age');
   if(a){a.oninput=()=>{const v=parseInt(a.value,10);if(v>0){S.age=v;calc();}};
@@ -344,15 +394,15 @@ function calc(){
   const errs=[];
   if(p.flat){
     const an=p.annual(S);
-    if(an==null){$('slip').innerHTML=`<div class="err">只有下次生日年齡 1–${p.ageTop} 歲的費率。</div>`;renderNotes();return;}
+    if(an==null){$('slip').innerHTML=`<div class="err">${p.nullMsg||`只有下次生日年齡 1–${p.ageTop} 歲的費率。`}</div>`;renderNotes();return;}
     if(p.newMax&&S.age>p.newMax)errs.push(`${S.age} 歲只供續保，新投保上限 ${p.newMax} 歲。`);
     const mode=MODES.find(m=>m.id===S.mode); const inst=an*mode.f; const sym=cur;
-    const base=p.annual({...S,opd:'N'});
+    const base=p.base?p.base(S):p.annual({...S,opd:'N'});
     $('slip').innerHTML=`${errs.map(e=>`<div class="err">${e}</div>`).join('')}
       <div><div class="k">每期保費（${mode.name}）</div><div class="big">${fmt(inst)}<small>${sym}</small></div></div>
       <div class="ledger">
         <div><span>基本計劃年繳</span><b>${fmt(base)}</b></div>
-        ${S.opd==='Y'?`<div><span>門診寶年繳</span><b>${fmt(an-base)}</b></div>`:''}
+        ${an>base+1e-9?`<div><span>${p.addonLabel||'門診寶'}年繳</span><b>${fmt(an-base)}</b></div>`:''}
         <div><span>年繳合計</span><b>${fmt(an)}</b></div>
         ${mode.id==='A'?'':`<div><span>繳費系數</span><b>× ${mode.f.toFixed(4)}</b></div><div><span>全年實付</span><b>${fmt(inst*mode.n)}</b></div>`}
       </div>`;
@@ -370,8 +420,10 @@ function calc(){
   const net=rate-disc;
   const annual=S.amt/1000*net;
   const mode=S.term==='single'?SINGLE:MODES.find(m=>m.id===S.mode);
-  const inst=annual*mode.f;
-  const years=S.term==='single'?1:+S.term;
+  const inst=annual*mode.f+(p.policyFee?p.policyFee[mode.id]||0:0);
+  const years=S.term==='single'?1:p.renew?1:(S.term==='66'||S.term==='86')?Math.max(+S.term-S.age,0):+S.term;
+  if(p.renew&&p.newMax&&S.age>p.newMax)errs.push(`${S.age} 歲只供續保，新投保上限 ${p.newMax} 歲。`);
+  const fee=p.policyFee?p.policyFee[mode.id]||0:0;
   const total=inst*mode.n*years;
   const perLabel=S.term==='single'?'整付保費':`每期保費（${mode.name}）`;
   $('slip').innerHTML=`
@@ -383,9 +435,10 @@ function calc(){
       <div><span>淨費率</span><b>${fmt(net)}</b></div>
       ${S.term==='single'?'':`<div><span>年繳保費（基準）</span><b>${fmt(annual)}</b></div>`}
       ${S.term==='single'||mode.id==='A'?'':`<div><span>繳費系數</span><b>× ${mode.f.toFixed(4)}</b></div>`}
-      <div><span>${S.term==='single'?'總保費':`${years} 年總保費`}</span><b>${fmt(total)}</b></div>
+      ${fee?`<div><span>保單費用（每期）</span><b>+ ${fmt(fee)}</b></div>`:''}
+      <div><span>${S.term==='single'?'總保費':p.renew?'本年度保費（按當時年齡）':`${years} 年總保費`}</span><b>${fmt(total)}</b></div>
     </div>
-    <p class="formula">${S.amt.toLocaleString('en-US')} ÷ 1,000 × ${fmt(net)}${S.term==='single'||mode.id==='A'?'':' × '+mode.f.toFixed(4)} = ${fmt(inst)}</p>`;
+    <p class="formula">${S.amt.toLocaleString('en-US')} ÷ 1,000 × ${fmt(net)}${S.term==='single'||mode.id==='A'?'':' × '+mode.f.toFixed(4)}${fee?' + '+fmt(fee):''} = ${fmt(inst)}</p>`;
   renderNotes();
 }
 function renderNotes(){
@@ -444,7 +497,7 @@ function renderAge(){
   if(!ser||(!p.flat&&!S.amt)){card.hidden=true;renderGrowth(null);return;} card.hidden=false;
   const sym=S.cur==='USD'?'USD':'HKD';
   const mode=S.term==='single'?SINGLE:MODES.find(m=>m.id===S.mode);
-  const years=S.term==='single'?1:p.flat?1:+S.term;
+  const years=S.term==='single'||p.flat||p.renew||isNaN(+S.term)?1:+S.term;
   const tot=x=>x*mode.f*mode.n*years;
   const desc=[p.fields.includes('gender')?(S.gender==='M'?'男':'女'):null,p.fields.includes('smoker')?(S.smoker==='N'?'非吸煙':'吸煙'):null,
     p.fields.includes('cur')?(S.cur==='USD'?'美元':'港元'):null,p.fields.includes('region')?'地區 '+S.region:null,p.fields.includes('pregion')?'地區 '+S.pregion:null,p.fields.includes('pcls')?{SPN:'特級優越非吸煙',SN:'優越非吸煙',STPN:'特級標準非吸煙',STN:'標準非吸煙',SS:'優越吸煙',STS:'標準吸煙'}[S.pcls]:null,p.flat?null:TERMNAME(S.term)+'供款',
@@ -463,7 +516,7 @@ function renderAge(){
   const short=v=>v>=1e6?(v/1e6).toFixed(v%1e6?1:0)+'M':v>=1e3?(v/1e3).toFixed(v%1e3?1:0)+'K':String(v);
   let g='';
   for(let v=0;v<=yMax+1e-9;v+=step){g+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L-6}" y="${y(v)+3.5}" text-anchor="end">${short(v)}</text>`;}
-  const xt=[];for(let a=Math.ceil(a0/10)*10;a<=a1;a+=10)xt.push(a); if(!xt.includes(a0))xt.unshift(a0); if(a1-xt[xt.length-1]>=4)xt.push(a1);
+  const xt=[];for(let a=Math.ceil(a0/10)*10;a<=a1;a+=10)xt.push(a); if(!xt.includes(a0)&&(!xt.length||xt[0]-a0>=5))xt.unshift(a0); if(a1-xt[xt.length-1]>=4)xt.push(a1);
   g+=xt.map(a=>`<text class="axis" x="${x(a)}" y="${H-6}" text-anchor="middle">${a}</text>`).join('');
   const pts=ser.map(d=>`${x(d.a).toFixed(1)},${y(d.annual).toFixed(1)}`).join(' ');
   const area=`${x(a0)},${y(0)} ${pts} ${x(a1)},${y(0)}`;
@@ -481,7 +534,7 @@ function renderAge(){
     const X=x(d.a),Y=y(d.annual);
     $('xh').setAttribute('x1',X);$('xh').setAttribute('x2',X);$('xh').setAttribute('visibility','visible');
     $('hd').setAttribute('cx',X);$('hd').setAttribute('cy',Y);$('hd').setAttribute('visibility','visible');
-    tip.hidden=false; tip.innerHTML=`${d.a} 歲　${S.term==='single'?'整付':'年繳'} <b>${fmt(d.annual)}</b>${d.g!=null?`　比上一歲 <b>${gp(d.g)}</b>`:''}<br>${S.term==='single'||p.flat?'':`${years} 年總保費 <b>${fmt(tot(d.annual))}</b>`}`;
+    tip.hidden=false; tip.innerHTML=`${d.a} 歲　${S.term==='single'?'整付':'年繳'} <b>${fmt(d.annual)}</b>${d.g!=null?`　比上一歲 <b>${gp(d.g)}</b>`:''}<br>${S.term==='single'||p.flat||p.renew||years===1?'':`${years} 年總保費 <b>${fmt(tot(d.annual))}</b>`}`;
     const px=X/W*r.width; const tw=tip.offsetWidth; tip.style.left=Math.min(Math.max(px,tw/2),r.width-tw/2)+'px';
   };
   const hide=()=>{tip.hidden=true;$('xh').setAttribute('visibility','hidden');$('hd').setAttribute('visibility','hidden');};
@@ -493,14 +546,14 @@ function renderAge(){
   const rows=[`<div><span>最年輕（${first.a} 歲）</span><b>${fmt(first.annual)}</b></div>`];
   if(cur)rows.push(`<div><span>現在選的 ${cur.a} 歲</span><b>${fmt(cur.annual)}</b></div>`);
   if(later)rows.push(`<div><span>遲 5 年（${later.a} 歲）投保</span><b>${fmt(later.annual)}　+${pct(cur.annual,later.annual)}</b></div>`);
-  if(cur&&later&&S.term!=='single'&&!p.flat)rows.push(`<div><span>總保費差額（${years} 年）</span><b>+${fmt(tot(later.annual)-tot(cur.annual))}</b></div>`);
+  if(cur&&later&&S.term!=='single'&&!p.flat&&!p.renew&&!(S.term==='66'||S.term==='86'))rows.push(`<div><span>總保費差額（${years} 年）</span><b>+${fmt(tot(later.annual)-tot(cur.annual))}</b></div>`);
   const cagr=(Math.pow(last.annual/first.annual,1/(last.a-first.a))-1)*100;
   if(cur&&cur.g!=null)rows.push(`<div><span>${cur.a} 歲比 ${cur.a-1} 歲</span><b>${gp(cur.g)}</b></div>`);
   if(cur&&later)rows.push(`<div><span>${cur.a}→${later.a} 歲平均每年</span><b>${gp((Math.pow(later.annual/cur.annual,1/5)-1)*100)}</b></div>`);
   rows.push(`<div><span>${first.a}→${last.a} 歲平均每年</span><b>${gp(cagr)}</b></div>`);
   rows.push(`<div><span>${p.flat?'表內最高年齡':'最高可投保'}（${last.a} 歲）</span><b>${fmt(last.annual)}　${(last.annual/first.annual).toFixed(1)} 倍</b></div>`);
   $('age-sum').innerHTML=rows.join('');
-  $('age-tbl').innerHTML=`<table><thead><tr><th>翌年歲</th><th>${S.term==='single'?'整付':'年繳'}（${sym}）</th><th>每年增長</th>${S.term==='single'||p.flat?'':`<th>${years} 年總保費</th>`}</tr></thead><tbody>${ser.map(d=>`<tr${d.a===S.age?' class="cur"':''}><td>${d.a}</td><td>${fmt(d.annual)}</td><td>${d.g==null?'—':gp(d.g)}</td>${S.term==='single'||p.flat?'':`<td>${fmt(tot(d.annual))}</td>`}</tr>`).join('')}</tbody></table>`;
+  $('age-tbl').innerHTML=`<table><thead><tr><th>翌年歲</th><th>${S.term==='single'?'整付':'年繳'}（${sym}）</th><th>每年增長</th>${S.term==='single'||p.flat||years===1?'':`<th>${years} 年總保費</th>`}</tr></thead><tbody>${ser.map(d=>`<tr${d.a===S.age?' class="cur"':''}><td>${d.a}</td><td>${fmt(d.annual)}</td><td>${d.g==null?'—':gp(d.g)}</td>${S.term==='single'||p.flat||years===1?'':`<td>${fmt(tot(d.annual))}</td>`}</tr>`).join('')}</tbody></table>`;
   renderGrowth(ser);
 }
 
@@ -520,7 +573,7 @@ function renderGrowth(ser){
   const y=v=>T+(yMax-v)/(yMax-yMin)*(H-T-B);
   let g='';
   for(let v=yMin;v<=yMax+1e-9;v+=step){g+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L-6}" y="${y(v)+3.5}" text-anchor="end">${+v.toFixed(1)}%</text>`;}
-  const xt=[];for(let a=Math.ceil(a0/10)*10;a<=a1;a+=10)xt.push(a); if(!xt.includes(a0))xt.unshift(a0); if(a1-xt[xt.length-1]>=4)xt.push(a1);
+  const xt=[];for(let a=Math.ceil(a0/10)*10;a<=a1;a+=10)xt.push(a); if(!xt.includes(a0)&&(!xt.length||xt[0]-a0>=5))xt.unshift(a0); if(a1-xt[xt.length-1]>=4)xt.push(a1);
   g+=xt.map(a=>`<text class="axis" x="${x(a)+bw/2}" y="${H-6}" text-anchor="middle">${a}</text>`).join('');
   const gap=bw>4?1:0.4;
   const bars=gs.map(d=>{const y0=y(0),y1=y(d.g);const top=Math.min(y0,y1),h=Math.max(Math.abs(y1-y0),1);
@@ -562,7 +615,7 @@ async function derive(pass){const enc=await getEnc();
   const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveBits']);
   return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:b64(enc.salt),iterations:enc.iter},base,256));}
 function setApp(on){document.querySelectorAll('.wrap > *:not(header):not(#lock)').forEach(el=>{if(on)el.removeAttribute('data-locked');else el.setAttribute('data-locked','');});$('lock').hidden=on;}
-function start(D){({RATES,CIM_DISC,LF_DISC,PL_DISC,PLCS_DISC,PLCS_RATE,CIE_DISC,MCV_COL,LF2_DISC,ENC_DISC}=D);setApp(true);normalize();render();}
+function start(D){({RATES,CIM_DISC,LF_DISC,PL_DISC,PLCS_DISC,PLCS_RATE,CIE_DISC,MCV_COL,LF2_DISC,ENC_DISC}=D);initGen();setApp(true);normalize();render();}
 (async()=>{
   setApp(false);
   try{const k=localStorage.getItem('pq-key');if(k){start(await tryKey(b64(k)));return;}}catch(e){}
