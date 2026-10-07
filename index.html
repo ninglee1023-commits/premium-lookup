@@ -178,7 +178,7 @@ const MODES = [
 ];
 const SINGLE = {id:'S', name:'整付', f:1, n:1};
 
-let CIM_DISC,LF_DISC,PL_DISC,PLCS_DISC,PLCS_RATE,CIE_DISC,MCV_COL;
+let CIM_DISC,LF_DISC,PL_DISC,PLCS_DISC,PLCS_RATE,CIE_DISC,MCV_COL,LF2_DISC,ENC_DISC;
 function band(table,amt,term){let d=0;for(const [th,v] of table){if(amt>=th&&v[term]!=null)d=v[term];}return d;}
 
 const P = {
@@ -207,6 +207,27 @@ const P = {
     disc(s){return band(CIM_DISC[s.cur],s.amt,s.term);},
     notes:['費率不受胎兒性別及孕婦年齡影響。','投保時只接受年繳；孩子出生登記後才可改繳費方式。','孖胎須投保兩份保額相同的保單。','保費不保證，公司可於保單周年日調整。'],
     src:'CIM3/BCIM3 產品手冊（2023-05-17）附錄 (i)「合資格孕婦」一行。'},
+  LFRE2:{code:'LFRE2',name:'自主未來 II',amtLabel:'投保額',fields:['gender','smoker'],curFixed:'USD',terms:['single','5','10','20','30'],modes:true,
+    min:{USD:10000},
+    rate(s){return RATES.lfre2[s.gender+s.smoker]?.[s.term]?.[s.age-1];},
+    disc(s){return band(LF2_DISC,s.amt,s.term);},
+    ageMax(s){return (RATES.lfre2[s.gender+s.smoker][s.term]||[]).length;},
+    notes:['投保年齡（翌年歲）：非吸煙 整付 1–75、5 年 1–75、10 年 1–70、20 年 1–60、30 年 1–50；吸煙 5 年上限 65、10 年 60。','較高年齡段（非吸煙 5 年 66–75、10 年 61–70、20 年 56–60；吸煙 5 年 56–65、10 年 56–60、20 年 51–60）須年繳及保額 ≥ 30,000 美元。','保額 20,000 美元起享大額折扣（折扣約為第一代 LFREE 的 95%）。','保費不保證。'],
+    src:'LFRE2 保費率表（2026 年 4 月）；產品手冊（2026 年 4 月）基本資料及附錄大額保費率折扣表。'},
+  ENCASH:{code:'ENCASH',name:'加護一生住院現金',amtLabel:'投保額',fields:['gender','smoker'],curFixed:'USD',terms:['5','10','15','20'],modes:true,
+    min:{USD:50000},max:{USD:2000000},
+    rate(s){return RATES.encash[s.smoker]?.[s.gender]?.[s.term]?.[s.age-1];},
+    disc(s){return band(ENC_DISC,s.amt,s.term);},
+    ageMax(s){return (RATES.encash[s.smoker][s.gender][s.term]||[]).length;},
+    notes:['投保年齡（翌年歲）：非吸煙 5／10 年 1–65、15 年 1–60、20 年 1–55；吸煙 5／10／15 年 1–55、20 年 1–50。','保額 125,000 美元起每 1,000 保額減 0.82／0.51／0.40／0.35（5／10／15／20 年）。','保額上限 2,000,000 美元（同一受保人所有 ENCASH 合計）。','保費不保證，可於保單周年日按風險級別劃一調整。'],
+    src:'ENCASH 產品手冊（2025-07-15）2.1 產品基本資料、附錄 (i) 保費率。'},
+  PVPP:{code:'PVPP',name:'雍譽非凡終身人壽',amtLabel:'投保額',fields:['gender','pcls','pregion'],curFixed:'USD',terms:['single'],modes:false,
+    min:{USD:1000000},
+    rate(s){return RATES.pvpp[s.pregion]?.[s.pcls]?.[s.gender]?.[s.age-1];},
+    disc(){return 0;},
+    ageMsg(s){const std=s.pcls==='STN'||s.pcls==='STS';const top=s.pregion==='B'?70:75;return `此風險級別只接受翌年歲 ${std?1:19}–${top} 歲投保。`;},
+    notes:['整付保費，終身人壽；保證身故賠償首 11 年為保額 100%，之後每年減 5% 至 50%（另加非保證終期紅利）。','風險級別：特級優越／優越／特級標準／標準（非吸煙），優越／標準（吸煙）；18 歲或以下只有標準級別。','地區 A+ 包括香港、中國內地、台灣、澳門、新加坡；地區 B 投保上限 70 歲。','最低保額 1,000,000 美元，不設大額折扣。','驗算：50 歲男、標準非吸煙、地區 A+，每 1,000 保額 151.59，即槓桿 6.60 倍，與手冊一致。'],
+    src:'PVPP 保費率表；產品手冊（2026 年 3 月）9. 產品資料。'},
   LFREE:{code:'LFREE',name:'自主未來',amtLabel:'投保額',fields:['gender','smoker'],curFixed:'USD',terms:['single','5','10','20','30'],modes:true,
     min:{USD:10000},
     rate(s){return RATES.lfree[s.gender+s.smoker]?.[s.term]?.[s.age-1];},
@@ -249,16 +270,21 @@ const P = {
     disc(s){return s.amt>=(s.cur==='USD'?1000000:8000000)?this.rate(s)*0.01:0;},
     notes:['劃一保證費率：每 1,000 名義金額 3 年繳 323.8、5 年繳 200，不論年齡、性別、吸煙。','名義金額 ≥ 1,000,000 美元／8,000,000 港元，整個供款期保費減 1%。','另有人民幣、澳元、加元、英鎊保單（澳元／加元／英鎊只接受年繳），此處只計美元及港元。','投保年齡 1–80 歲（翌年歲）。'],
     src:'TRST 產品手冊（2026 年 1 月 v3.4）附錄 C 保費率、基本資料（保費率折扣）。'},
+  PACE:{code:'PACE',name:'駿譽財富',amtLabel:'名義金額',fields:[],curFixed:'USD',terms:['3'],modes:false,annualOnly:true,noAge:true,
+    min:{USD:600000},
+    rate(){return 333.33;}, disc(){return 0;},
+    notes:['劃一保證費率：每 1,000 名義金額每年 333.33，3 年供款，只接受年繳。','最低名義金額 600,000 美元（推廣期曾下調至 195,000，暫定至 2026-05-31，請以最新 PRUNews 為準）。','投保年齡 1–80 歲（翌年歲）。'],
+    src:'PACE 產品手冊（2026 年 4 月 v5）附錄 B 保費率、基本資料。'},
   ENLIT:{code:'ENLIT',name:'啟耀未來',amtLabel:'名義金額',fields:[],curFixed:'USD',terms:['5'],modes:true,noAge:true,
     min:{USD:20000},max:{USD:416000},
     rate(){return 200;}, disc(){return 0;},
     notes:['名義金額相等於標準總保費，5 年供款，即年繳＝名義金額 ÷ 5。','手冊沒有獨立費率表，此計法由「名義金額＝標準總保費」推算。','名義金額上限 416,000 美元。'],
     src:'ENLIT 產品手冊（2026 年 1 月）8 產品資料。'},
 };
-const ORDER=['CIM3','CIE3','MCVIP','BCIM3','LFREE','PLP2','PLCS','EGIP','EGI','PRMESP','TRST','ENLIT'];
+const ORDER=['CIM3','CIE3','ENCASH','MCVIP','LFRE2','PVPP','BCIM3','LFREE','PLP2','PLCS','EGIP','EGI','PRMESP','TRST','PACE','ENLIT'];
 const TERMNAME=t=>t==='single'?'整付':t==='life'?'每年續保':t+' 年';
 
-let S = {prod:'CIM3',gender:'M',smoker:'N',cur:'USD',region:'A',term:'20',mode:'A',age:35,amt:100000,plan:'3',ded:'Z',opd:'N'};
+let S = {prod:'CIM3',gender:'M',smoker:'N',cur:'USD',region:'A',term:'20',mode:'A',age:35,amt:100000,plan:'3',ded:'Z',opd:'N',pcls:'STN',pregion:'A+'};
 try{const v=JSON.parse(localStorage.getItem('pq-state')||'null');if(v&&P[v.prod])S={...S,...v};}catch(e){}
 function save(){try{localStorage.setItem('pq-state',JSON.stringify(S));}catch(e){}}
 
@@ -289,6 +315,8 @@ function renderForm(){
   if(p.fields.includes('cur'))two2.push(seg('cur','保單貨幣',[['USD','美元'],['HKD','港元']],S.cur));
   if(p.fields.includes('region'))two2.push(seg('region','居住地區',[['A','地區 A'],['B','地區 B']],S.region));
   if(two2.length)f.push(`<div class="row2">${two2.join('')}</div>`);
+  if(p.fields.includes('pcls'))f.push(seg('pcls','風險級別',[['SPN','特級優越 非吸煙'],['SN','優越 非吸煙'],['STPN','特級標準 非吸煙'],['STN','標準 非吸煙'],['SS','優越 吸煙'],['STS','標準 吸煙']],S.pcls));
+  if(p.fields.includes('pregion'))f.push(seg('pregion','居住地區',[['A+','地區 A+'],['A','地區 A'],['B','地區 B']],S.pregion));
   if(p.fields.includes('plan'))f.push(seg('plan','計劃級別',[['1','計劃一 大中華'],['2','計劃二 大中華'],['3','計劃三 全球除美'],['4','計劃四 全球']],S.plan));
   if(p.fields.includes('ded'))f.push(seg('ded','自付額',[['Z','0'],['D','內地 1 萬／境外 3 萬港元']],S.plan==='1'?'D':S.ded,v=>S.plan==='1'&&v==='Z'));
   if(p.fields.includes('opd'))f.push(seg('opd','門診寶（指定附加保障）',[['N','不附加'],['Y','附加']],S.opd));
@@ -335,7 +363,7 @@ function calc(){
   const rate=p.rate(S);
   if(!p.noAge&&(rate==null)){
     const mx=p.ageMax?p.ageMax(S):0;
-    errs.unshift(mx?`${TERMNAME(S.term)}供款只接受翌年歲 1–${mx} 歲投保。`:'此組合沒有費率。');
+    if(p.ageMsg)errs.unshift(p.ageMsg(S)); else errs.unshift(mx?`${TERMNAME(S.term)}供款只接受翌年歲 1–${mx} 歲投保。`:'此組合沒有費率。');
   }
   if(errs.length&&(rate==null||!S.amt)){$('slip').innerHTML=errs.map(e=>`<div class="err">${e}</div>`).join('');renderNotes();return;}
   const disc=p.disc(S)||0;
@@ -419,7 +447,7 @@ function renderAge(){
   const years=S.term==='single'?1:p.flat?1:+S.term;
   const tot=x=>x*mode.f*mode.n*years;
   const desc=[p.fields.includes('gender')?(S.gender==='M'?'男':'女'):null,p.fields.includes('smoker')?(S.smoker==='N'?'非吸煙':'吸煙'):null,
-    p.fields.includes('cur')?(S.cur==='USD'?'美元':'港元'):null,p.fields.includes('region')?'地區 '+S.region:null,p.flat?null:TERMNAME(S.term)+'供款',
+    p.fields.includes('cur')?(S.cur==='USD'?'美元':'港元'):null,p.fields.includes('region')?'地區 '+S.region:null,p.fields.includes('pregion')?'地區 '+S.pregion:null,p.fields.includes('pcls')?{SPN:'特級優越非吸煙',SN:'優越非吸煙',STPN:'特級標準非吸煙',STN:'標準非吸煙',SS:'優越吸煙',STS:'標準吸煙'}[S.pcls]:null,p.flat?null:TERMNAME(S.term)+'供款',
     p.flat?null:`${p.amtLabel} ${S.amt.toLocaleString('en-US')}`,
     p.fields.includes('plan')?`計劃${'一二三四'[S.plan-1]}`:null,p.fields.includes('ded')?(S.plan==='1'||S.ded==='D'?'有自付額':'0 自付額'):null,
     p.fields.includes('opd')&&S.opd==='Y'?'連門診寶':null].filter(Boolean).join(' · ');
@@ -534,7 +562,7 @@ async function derive(pass){const enc=await getEnc();
   const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveBits']);
   return new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:b64(enc.salt),iterations:enc.iter},base,256));}
 function setApp(on){document.querySelectorAll('.wrap > *:not(header):not(#lock)').forEach(el=>{if(on)el.removeAttribute('data-locked');else el.setAttribute('data-locked','');});$('lock').hidden=on;}
-function start(D){({RATES,CIM_DISC,LF_DISC,PL_DISC,PLCS_DISC,PLCS_RATE,CIE_DISC,MCV_COL}=D);setApp(true);normalize();render();}
+function start(D){({RATES,CIM_DISC,LF_DISC,PL_DISC,PLCS_DISC,PLCS_RATE,CIE_DISC,MCV_COL,LF2_DISC,ENC_DISC}=D);setApp(true);normalize();render();}
 (async()=>{
   setApp(false);
   try{const k=localStorage.getItem('pq-key');if(k){start(await tryKey(b64(k)));return;}}catch(e){}
