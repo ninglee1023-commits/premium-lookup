@@ -95,6 +95,8 @@ header p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
 .chart .bar.hv{opacity:.9;stroke:var(--ink);stroke-width:.6}
 .chart .avg{stroke:var(--ink);stroke-width:1;stroke-dasharray:4 3;opacity:.6}
 .chart .avgt{fill:var(--ink)}
+#cv-tbl table{font-size:12.5px}
+#cv-tbl th,#cv-tbl td{padding:5px 3px}
 footer{font-size:11.5px;color:var(--muted);text-align:center}
 @media (prefers-reduced-motion:no-preference){.big{transition:color .2s}}
 </style>
@@ -131,6 +133,14 @@ img{max-width:100%}
 
   <section class="slip" id="slip" aria-live="polite"></section>
 
+  <section class="card" id="cvcard" aria-labelledby="cv-h" hidden>
+    <div>
+      <h2 id="cv-h" class="h2">保證現金價值（推算）</h2>
+      <p class="hint" id="cv-sub"></p>
+    </div>
+    <div class="tblwrap" id="cv-tbl"></div>
+    <ul class="notes" id="cv-notes"></ul>
+  </section>
   <section class="card" id="agecard" aria-labelledby="age-h">
     <div>
       <h2 id="age-h" class="h2">保費隨投保年齡變化</h2>
@@ -278,7 +288,7 @@ function renderForm(){
   m.onblur=()=>{m.value=S.amt?S.amt.toLocaleString('en-US'):'';};
 }
 function calc(){
-  save(); renderAge();
+  save(); renderAge(); renderCV();
   const p=P[S.prod]; const cur=S.cur; const sym=cur==='USD'?'USD':'HKD';
   const errs=[];
   const min=p.min?.[cur]; if(min&&S.amt<min)errs.push(`${p.amtLabel}最低 ${sym} ${min.toLocaleString('en-US')}。`);
@@ -326,6 +336,39 @@ function ageSeries(){
   }
   out.forEach((d,i)=>{const pr=out[i-1];d.g=(pr&&pr.a===d.a-1)?(d.annual/pr.annual-1)*100:null;});
   return out.length?out:null;
+}
+
+function renderCV(){
+  const card=$('cvcard');
+  if(S.prod!=='CIM3'||!S.amt||!RATES.cim3cv){card.hidden=true;return;}
+  const cv=RATES.cim3cv[S.term]; const tbl=RATES.cim3[S.cur+'A'+S.smoker]?.[S.gender]?.[S.term];
+  const rA=tbl?.[S.age-1]; const myRate=P.CIM3.rate(S);
+  if(!cv||rA==null||myRate==null){card.hidden=true;return;}
+  card.hidden=false;
+  const disc=P.CIM3.disc(S); const base=S.amt/1000*(rA-disc);
+  const annual=S.amt/1000*(myRate-disc); const term=+S.term;
+  const f=y=>{ if(cv.f[y]!=null) return {v:cv.f[y],est:false};
+    if(y>=cv.plateauFrom) return {v:cv.plateau,est:false};
+    if(cv.linear&&y>cv.linear.from&&y<cv.linear.to){const f0=cv.f[cv.linear.from];return {v:f0+(y-cv.linear.from)*(cv.plateau-f0)/(cv.linear.to-cv.linear.from),est:true};}
+    return null;};
+  const rows=[]; const seen=new Set();
+  const add=(y,label)=>{ if(y<1||seen.has(y))return; seen.add(y); const anb=S.age+y;
+    let g,est=false,miss=false;
+    if(anb>=86){g=S.amt;} else {const r=f(y); if(!r){miss=true;} else {g=r.v*base;est=r.est;}}
+    const paid=annual*Math.min(y,term);
+    rows.push(`<tr><td>${label||y}</td><td>${anb}</td><td>${fmt(paid,0)}</td><td>${miss?'需建議書':fmt(Math.round(g),0)+(est?' *':'')}</td><td>${miss?'—':Math.round(g/paid*100)+'%'}</td></tr>`);};
+  for(let y=1;y<=20;y++)add(y); add(25); add(30);
+  for(const a of [66,71,76,81,86]){const y=a-S.age; if(y>30)add(y,`${y}`);}
+  $('cv-sub').textContent=`${S.gender==='M'?'男':'女'} · ${S.smoker==='N'?'非吸煙':'吸煙'} · ${S.age} 歲 · ${S.term} 年供款 · 保額 ${S.amt.toLocaleString('en-US')} ${S.cur}。保單年度終結時的數值。`;
+  $('cv-tbl').innerHTML=`<table><thead><tr><th>保單年度</th><th>翌年歲</th><th>已繳保費</th><th>保證現金價值</th><th>佔已繳</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  const notes=['只計保證部分；非保證特別紅利因年齡、性別及紅利公佈日期而異，請以建議書為準。',
+    '規律：保證現金價值 = 保額 ÷ 1,000 × 地區 A 費率（扣大額折扣）× 保單年度系數；地區 B 客戶的保證現金價值與地區 A 相同。翌年歲 86 起等於保額。',
+    '已用 11 份美元、非吸煙建議書核對，誤差不超過 2 美元（四捨五入）。'];
+  if(S.term==='20')notes.push('標 * 的年度（31–54 年）用直線推算，核對誤差不超過 5 美元。');
+  if(S.cur!=='USD'||S.smoker!=='N')notes.push('港元或吸煙組合未有建議書驗證，數字按同一規律推算。');
+  if(['10','15','25'].includes(S.term))notes.push(`${S.term} 年供款的系數只來自 1 份建議書，未有第二份交叉驗證。`);
+  if(rows.some(r=>r.includes('需建議書')))notes.push('「需建議書」的年度在現有建議書中沒有數據。');
+  $('cv-notes').innerHTML=notes.map(n=>`<li>${n}</li>`).join('');
 }
 const gp=v=>(v>=0?'+':'')+v.toFixed(1)+'%';
 function renderAge(){
