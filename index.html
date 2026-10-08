@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0f6b5c">
+<meta name="theme-color" content="#ed1b2e">
 <meta name="robots" content="noindex,nofollow">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,20 +18,20 @@
 <style>
 /* Layout: single phone column — sticky product rail, form, then a ledger-style result slip */
 :root{
-  --bg:#f3f4f2; --surface:#ffffff; --ink:#18211f; --muted:#5f6b67; --line:#d9dedb;
-  --accent:#0f6b5c; --accent-ink:#ffffff; --accent-soft:#e1efeb; --warn:#a14a12; --warn-soft:#fbeee2;
-  --slip:#fffdf6; --slip-line:#e6e0cc;
+  --bg:#f5f5f5; --surface:#ffffff; --ink:#1f1f1f; --muted:#5e5e5e; --line:#dedede;
+  --accent:#ed1b2e; --accent-ink:#ffffff; --accent-soft:#fde8ea; --warn:#a14a12; --warn-soft:#fbeee2;
+  --slip:#ffffff; --slip-line:#e3e3e3;
   --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
   --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#111715; --surface:#19211f; --ink:#e7ece9; --muted:#9aa7a2; --line:#2c3633;
-  --accent:#4fbfa6; --accent-ink:#06201a; --accent-soft:#183a33; --warn:#f0a868; --warn-soft:#3a2716;
-  --slip:#1d2522; --slip-line:#33403b; color-scheme:dark}}
+  --bg:#141414; --surface:#1e1e1e; --ink:#ededed; --muted:#a3a3a3; --line:#333333;
+  --accent:#e8303f; --accent-ink:#ffffff; --accent-soft:#3d1a1e; --warn:#f0a868; --warn-soft:#3a2716;
+  --slip:#222222; --slip-line:#3a3a3a; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#111715; --surface:#19211f; --ink:#e7ece9; --muted:#9aa7a2; --line:#2c3633;
-  --accent:#4fbfa6; --accent-ink:#06201a; --accent-soft:#183a33; --warn:#f0a868; --warn-soft:#3a2716;
-  --slip:#1d2522; --slip-line:#33403b; color-scheme:dark}
+  --bg:#141414; --surface:#1e1e1e; --ink:#ededed; --muted:#a3a3a3; --line:#333333;
+  --accent:#e8303f; --accent-ink:#ffffff; --accent-soft:#3d1a1e; --warn:#f0a868; --warn-soft:#3a2716;
+  --slip:#222222; --slip-line:#3a3a3a; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
@@ -102,9 +102,22 @@ header p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
 .chart .avg{stroke:var(--ink);stroke-width:1;stroke-dasharray:4 3;opacity:.6}
 .chart .avgt{fill:var(--ink)}
 #cv-tbl table{font-size:12.5px}
-#cv-tbl th,#cv-tbl td{padding:5px 2px}
+#cv-tbl th,#cv-tbl td{padding:5px 1px}
+#cv-tbl td:last-child,#cv-tbl th:last-child{padding-left:4px}
 #cv-tbl table{font-size:11.5px;width:100%}
 #cv-tbl td:first-child,#cv-tbl th:first-child{text-align:left}
+.pick{display:flex;flex-wrap:wrap;gap:6px}
+.pick button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pick button i{width:10px;height:10px;border-radius:50%;background:var(--line);display:inline-block}
+.pick button[aria-pressed="true"]{border-color:var(--ink);font-weight:700}
+.pick button:disabled{opacity:.4;cursor:not-allowed}
+#cmp-tbl table{font-size:12px}
+#cmp-tbl th,#cmp-tbl td{padding:5px 4px}
+#cmp-tbl tr.be td{font-weight:700}
+.chart .lg{font-family:var(--f-num);font-size:10px}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.lnk{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:9px;padding:8px 12px;font-size:13.5px;text-decoration:none}
+.lnk small{color:var(--muted);font-family:var(--f-num);font-size:11px}
 footer{font-size:11.5px;color:var(--muted);text-align:center}
 @media (prefers-reduced-motion:no-preference){.big{transition:color .2s}}
 </style>
@@ -150,6 +163,16 @@ img{max-width:100%}
     <div class="tblwrap" id="cv-tbl"></div>
     <ul class="notes" id="cv-notes"></ul>
   </section>
+  <section class="card" id="cmpcard" aria-labelledby="cmp-h" hidden>
+    <div>
+      <h2 id="cmp-h" class="h2">儲蓄產品回報比較</h2>
+      <p class="hint">最多選 4 款比較。圖為各保單年度的內部回報率（橫軸：保單年度）。數值與名義金額、投保年齡無關。</p>
+    </div>
+    <div class="pick" id="cmp-pick" role="group" aria-label="選擇比較產品"></div>
+    <div class="chart" id="cmp-chart"></div>
+    <div class="tblwrap" id="cmp-tbl"></div>
+    <ul class="notes" id="cmp-notes"></ul>
+  </section>
   <section class="card" id="agecard" aria-labelledby="age-h">
     <div>
       <h2 id="age-h" class="h2">保費隨投保年齡變化</h2>
@@ -171,6 +194,7 @@ img{max-width:100%}
   <section class="card">
     <ul class="notes" id="notes"></ul>
     <div class="src" id="src"></div>
+    <div class="links" id="weblinks" aria-label="保誠官網資料"></div>
   </section>
 
   <footer>費率取自保誠產品手冊（只供內部參考）。手冊版本見各產品來源。<br><button type="button" id="relock" class="quick-lock">鎖定並清除此手機的密碼</button></footer>
@@ -409,7 +433,7 @@ function renderForm(){
   m.onblur=()=>{m.value=S.amt?S.amt.toLocaleString('en-US'):'';};
 }
 function calc(){
-  save(); renderAge(); renderCV();
+  save(); renderAge(); renderCV(); renderCmp();
   const p=P[S.prod]; const cur=S.cur; const sym=cur==='USD'?'USD':'HKD';
   const errs=[];
   if(p.flat){
@@ -464,7 +488,7 @@ function calc(){
 function renderNotes(){
   const p=P[S.prod];
   $('notes').innerHTML=[...p.notes,'未計保費徵費及附加保障；四捨五入以建議書為準。'].map(n=>`<li>${n}</li>`).join('');
-  $('src').textContent='來源：'+p.src;
+  $('src').textContent='來源：'+p.src; renderLinks(p);
 }
 function ageSeries(){
   const p=P[S.prod]; if(p.noAge) return null;
@@ -492,6 +516,73 @@ const CVF={ // 儲蓄：表內數值只取決於保單年度，與名義金額�
     note:'按「保證可支取現金：積存生息」，保證部分包括已積存的保證可支取現金。系統只列第 1–20 年及之後每 5 年。'},
 };
 const CVC={CIM3:1,CIE3:1,CIP2:1,ECI:1,BCIM3:1}; // 重疾
+// ---- 內部回報率（IRR）：保費於每年年初繳付，已收金額於年末收取，第 Y 年末退保 ----
+function cvFlows(t,spec){ // 每年：繳付、已收（年末）、退保價值、保證價值
+  const byY=new Map(t.rows.map(r=>[r[0],r])); const out=new Map(); let pc=0, pp=0;
+  for(const r of t.rows){const y=r[0]; const sum=ix=>ix.reduce((a,i)=>a+r[i],0);
+    const paid=spec.paid?r[spec.paid]:0;
+    out.set(y,{prem:r[1]-pc,inc:paid-pp,cum:r[1],paid,tot:r[spec.tot],g:sum(spec.g)}); pc=r[1]; pp=paid;}
+  return out;}
+function irrAt(fl,Y){
+  const cf=new Array(Y+1).fill(0);
+  for(const [y,f] of fl){if(y>Y)break; cf[y-1]-=f.prem; cf[y]+=f.inc;}
+  const f=fl.get(Y); if(!f) return null; cf[Y]+=f.tot;
+  if(!cf.some(v=>v>0)) return null;
+  const npv=r=>cf.reduce((a,v,i)=>a+v/Math.pow(1+r,i),0);
+  let lo=-0.99, hi=1; let flo=npv(lo), fhi=npv(hi); if(flo*fhi>0) return null;
+  for(let i=0;i<100;i++){const m=(lo+hi)/2, fm=npv(m); if(fm*flo>0){lo=m;flo=fm;}else hi=m;}
+  return (lo+hi)/2;}
+function breakEven(fl,guar){let prev=0;for(const [y,f] of fl){const v=(guar?f.g:f.tot)+f.paid; if(f.cum>0&&v>=f.cum-0.5)return y-prev>1?`${prev+1}–${y}`:String(y); prev=y;} return null;}
+const CMPV=[['TRST_5','TRST','信守明天','5 年'],['TRST_3','TRST','信守明天','3 年'],['PACE_3','PACE','駿譽財富','3 年'],['PRMESP_1','PRMESP','世譽財富','整付'],
+  ['ENLIT_5','ENLIT','啟耀未來','5 年'],['EGI_1','EGI','雋享入息','整付'],['EGIP_3','EGIP','雋享入息傳承','3 年'],['EGIP_5','EGIP','雋享入息傳承','5 年'],
+  ['PLCS_5','PLCS','息享人生','5 年'],['PLCS_10','PLCS','息享人生','10 年']];
+const CMPCOL=['var(--accent)','#2f6fb5','#7a7a7a','#c8860d'];
+function renderCmp(){
+  const card=$('cmpcard'); const F=RATES.cv?.flat;
+  if(S.cat!=='sav'||!F){card.hidden=true;return;}
+  const avail=CMPV.filter(v=>F[v[0]]);
+  if(!Array.isArray(S.cmp))S.cmp=['TRST_5','PACE_3','PRMESP_1','ENLIT_5'];
+  S.cmp=S.cmp.filter(k=>avail.some(v=>v[0]===k)).slice(0,4);
+  card.hidden=false;
+  const col=k=>CMPCOL[S.cmp.indexOf(k)];
+  $('cmp-pick').innerHTML=avail.map(v=>{const on=S.cmp.includes(v[0]);return `<button type="button" data-k="${v[0]}" aria-pressed="${on}"${!on&&S.cmp.length>=4?' disabled':''}><i style="${on?`background:${col(v[0])}`:''}"></i>${v[2]} ${v[3]}</button>`;}).join('');
+  $('cmp-pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{const k=b.dataset.k;S.cmp=S.cmp.includes(k)?S.cmp.filter(x=>x!==k):[...S.cmp,k];save();renderCmp();});
+  const sel=S.cmp.map(k=>{const v=CMPV.find(x=>x[0]===k);const spec=CVF[v[1]];const fl=cvFlows(F[k],spec);
+    const irr=new Map();for(const y of fl.keys())irr.set(y,irrAt(fl,y));
+    return {k,v,spec,fl,irr,be:breakEven(fl,false),bg:spec.paid&&v[1].startsWith('EGI')?null:breakEven(fl,true)};});
+  if(!sel.length){$('cmp-chart').innerHTML='';$('cmp-tbl').innerHTML='<p class="hint">請選擇產品。</p>';$('cmp-notes').innerHTML='';return;}
+  // 圖：第 1–50 年 IRR
+  const W=340,H=200,L=34,R=8,T=10,B=22, X0=1,X1=50, Ymin=-0.04;
+  let Ymax=0.02; sel.forEach(o=>o.irr.forEach((r,y)=>{if(y<=X1&&r!=null&&r>Ymax)Ymax=r;})); Ymax=Math.ceil(Ymax*100)/100;
+  const x=y=>L+(y-X0)/(X1-X0)*(W-L-R), yy=r=>T+(Ymax-Math.max(r,Ymin))/(Ymax-Ymin)*(H-T-B);
+  let g=''; for(let r=Ymin;r<=Ymax+1e-9;r+=0.02){g+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${yy(r)}" y2="${yy(r)}"${Math.abs(r)<1e-9?' style="stroke:var(--muted)"':''}/><text class="axis" x="${L-4}" y="${yy(r)+3}" text-anchor="end">${Math.round(r*100)}%</text>`;}
+  [1,10,20,30,40,50].forEach(y=>g+=`<text class="axis" x="${x(y)}" y="${H-6}" text-anchor="middle">${y}</text>`);
+  const lines=sel.map(o=>{const pts=[...o.irr].filter(([y,r])=>y<=X1&&r!=null&&r>=Ymin).map(([y,r])=>`${x(y).toFixed(1)},${yy(r).toFixed(1)}`);
+    return pts.length?`<polyline class="ln" style="stroke:${col(o.k)}" points="${pts.join(' ')}"/>`:'';}).join('');
+  $('cmp-chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="各儲蓄產品按保單年度的內部回報率">${g}${lines}</svg>`;
+  const YS=[5,10,15,20,25,30,40,50,60,70];
+  const th=sel.map(o=>`<th><span style="color:${col(o.k)}">●</span> ${o.v[1]}<br><small>${o.v[3]}</small></th>`).join('');
+  const rows=[`<tr class="be"><td>預期回本</td>${sel.map(o=>`<td>${o.be?'第 '+o.be+' 年':'—'}</td>`).join('')}</tr>`,
+    `<tr class="be"><td>保證回本</td>${sel.map(o=>`<td>${o.bg?'第 '+o.bg+' 年':'—'}</td>`).join('')}</tr>`,
+    ...YS.map(y=>`<tr><td>第 ${y} 年 IRR</td>${sel.map(o=>`<td>${pct(o.irr.get(y)??null)}</td>`).join('')}</tr>`)];
+  $('cmp-tbl').innerHTML=`<table><thead><tr><th></th>${th}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  const n=['IRR＝假設在該年度終結時退保的年化回報，保費於每年年初繳付（年繳），已派入息或已提取現金按每年年末收取計。圖中低於 −4% 的部分不顯示。',
+    '回本＝退保價值（加已收金額）≥ 已繳保費的第一個保單年度；「保證回本」只計保證部分。'];
+  if(sel.some(o=>o.v[1]==='EGI'||o.v[1]==='EGIP'))n.push('雋享入息系列按「每月入息：現金提取」；每月入息含非保證部分，所以不列保證回本。');
+  if(sel.some(o=>o.v[1]==='ENLIT'))n.push('啟耀未來只限兒童投保（翌年歲 1–18），按第 18 年提取 105% 名義金額計。');
+  if(sel.some(o=>o.v[1]==='PLCS'))n.push('息享人生第 20 年後只有每 5 年數據，所以回本年份可能以範圍顯示。');
+  if(sel.some(o=>o.v[1]==='TRST'))n.push('信守明天按名義金額 < 1,000,000 計；≥ 1,000,000 保費 99 折，IRR 略高（約 0.05–0.1%）。');
+  n.push('表到受保人 100 歲（以 1 歲投保計）；年紀較大投保的客戶，後段年度不適用。非保證部分按 2026-10-08 建議書的紅利假設。');
+  $('cmp-notes').innerHTML=n.map(t=>`<li>${t}</li>`).join('');
+}
+const PRUWEB={"TRST":["save/savings/prudential-entrust-multi-currency-plan","trst-product-brochure.pdf",3.1],"PACE":["save/savings/prime-ace-insurance-plan","pace-product-brochure.pdf",8.6],"PRMESP":["save/savings/prime-eternity","prime-eternity-product-brochure.pdf",9.8],"ENLIT":["save/savings/prudential-enlight-savings-insurance-series","enlit-product-brochure.pdf",5.6],"EGI":["save/retirement/evergreen-wealth-income","evergreen-wealth-income-product-brochure.pdf",3.5],"EGIP":["save/retirement/evergreen-wealth-income-plus","evergreen-wealth-income-plus-product-brochure.pdf",1.9],"PLCS":["save/retirement/prulife-coupon-saver","prulife-coupon-saver-product-brochure.pdf",0.7],"LFRE2":["life/life-protection/livefree-protector-insurance-plan-ii","livefree-protector-ii-product-brochure.pdf",7.5],"PLP2":["life/life-protection/prulife-protector-ii","prulife-protector-ii-product-brochure.pdf",1.0],"PVPP":["life/life-protection/prime-vantage-prestige-protector-insurance-plan","pvpp-product-brochure.pdf",3.6],"ENCASH":["health/medical/pru-encash-hospital-cash-savings-insurance","encash-product-brochure.pdf",1.8],"CIM3":["health/critical-illness/pruhealth-guardian-critical-illness-plan-series","pruhealth-guardian-critical-illness-plan-series-product-brochure.pdf",3.1],"BCIM3":["health/critical-illness/pruhealth-guardian-critical-illness-plan-series","pruhealth-guardian-critical-illness-plan-series-product-brochure.pdf",3.1],"CIE3":["health/critical-illness/pruhealth-critical-illness-extended-care-iii","pruhealth-critical-illness-extended-care-iii-product-brochure.pdf",3.8],"CIP2":["health/critical-illness/pruhealth-critical-illness-first-protect-ii","pruhealth-critical-illness-first-protect-ii-product-brochure.pdf",1.4],"ECI":["health/critical-illness/easywell-critical-illness-protector","product-eci-product-brochure-tc.pdf",2.1],"C360":["health/critical-illness/prucancer-360","prucancer-360-product-brochure.pdf",0.8],"CIT2":["health/critical-illness/pruhealth-critical-illness-term-ii","pruhealth-critical-illness-term-ii-product-brochure.pdf",0.4],"MCVIP":["health/medical/premierflex-medical-plan","premierflex-medical-plan-product-brochure.pdf",4.4],"PPM":["health/medical/prumyhealth-prestige-medical-plan","prumyhealth-prestige-medical-plan-2025-product-brochure.pdf",2.1],"VEP":["health/medical/prudential-VHIS-series/pruhealth-vhis-easychoice-plan","pruhealth-vhis-easychoice-plan-product-brochure.pdf",1.9,"pruhealth-vhis-easychoice-plan-premium-table.pdf"],"VIP":["health/medical/prudential-VHIS-series/pruhealth-vhis-vip-plan","pruhealth-vhis-vip-plan-tc.pdf",2.9,"pruhealth-vhis-vip-premium-table.pdf"],"VFP":["health/medical/prudential-VHIS-series/pruhealth-flexichoice-medical-plan","pruhealth-flexichoice-medical-plan-r-product-brochure.pdf",1.8,"pruhealth-flexichoice-medical-plan-premium-table-tc.pdf"],"VSP":["health/medical/prudential-VHIS-series/pruhealth-corechoice-medical-plan","pruhealth-corechoice-medical-plan-product-brochure.pdf",1.8,"pruhealth-corechoice-medical-plan-premium-table-tc.pdf"],"PMP":["health/medical/pruhealth-medical-plus","pruhealth-medical-plus-2024-product-brochure.pdf",1.4],"HTPR":["health/medical/pruhealth-secure-top-up-plan","pruhealth-secure-top-up-plan-product-brochure.pdf",2.4],"MLP":["health/medical/prumed-lifelong-care-plan","prumed-lifelong-care-plan-product-brochure.pdf",5.3],"CPE":["health/medical/pruhealth-essential-critical-care","pruhealth-essential-critical-care-product-brochure.pdf",1.0]};
+function renderLinks(p){const L=PRUWEB[S.prod]; const el=$('weblinks');
+  if(!L){el.innerHTML='<p class="hint">保誠官網沒有此產品的公開頁面，請以 PIL 產品手冊為準。</p>';return;}
+  const H='https://www.prudential.com.hk', B=H+'/content/dam/prudential-phkl/pdf/tc/brochure/';
+  el.innerHTML=`<a class="lnk" href="${H}/tc/products/${L[0]}/" target="_blank" rel="noopener">官網產品頁</a>`+
+    `<a class="lnk" href="${B}${L[1]}" target="_blank" rel="noopener">產品小冊子 PDF <small>${L[2]} MB</small></a>`+
+    (L[3]?`<a class="lnk" href="${B}${L[3]}" target="_blank" rel="noopener">官網保費表 PDF</a>`:'');}
+const pct=r=>r==null?'—':(r*100).toFixed(2)+'%';
 function cvRowsWanted(n){const out=[];for(let y=1;y<=n;y++)if(y<=20||y%5===0||y===n)out.push(y);return out;}
 function renderCV(){
   const card=$('cvcard'); const CV=RATES.cv; const p=P[S.prod];
@@ -505,13 +596,17 @@ function renderCV(){
     const k=sc/t.base; const sum=(r,ix)=>ix.reduce((a,i)=>a+r[i],0);
     const byY=new Map(t.rows.map(r=>[r[0],r])); const last=t.rows[t.rows.length-1][0];
     const all=window.CVALL; const ys=all?t.rows.map(r=>r[0]):cvRowsWanted(last).filter(y=>byY.has(y));
-    head=`<th>年度</th><th>已繳</th><th>保證</th><th>非保證</th><th>退保價值</th>${spec.paid?'<th>已收</th>':''}<th>÷已繳</th>`;
+    const fl=cvFlows(t,spec);
+    head=`<th>年度</th><th>保證</th><th>非保證</th><th>退保價值</th>${spec.paid?'<th>已收</th>':''}<th>÷已繳</th><th>IRR</th>`;
     for(const y of ys){const r=byY.get(y); if(!r)continue;
       const prem=r[1]*k, g=sum(r,spec.g)*k, ng=sum(r,spec.ng)*k, tot=r[spec.tot]*k, pd=spec.paid?r[spec.paid]*k:0;
-      rows.push(`<tr><td>${y}</td><td>${fmt(prem,0)}</td><td>${fmt(g,0)}</td><td>${fmt(ng,0)}</td><td><b>${fmt(tot,0)}</b></td>${spec.paid?`<td>${fmt(pd,0)}</td>`:''}<td>${prem?Math.round((tot+pd)/prem*100)+'%':'—'}</td></tr>`);}
-    sub=`${p.code} · ${TERMNAME(S.term)}供款 · ${p.amtLabel} ${S.amt.toLocaleString('en-US')} USD。數值與投保年齡、性別無關；表只到受保人 100 歲。`;
+      rows.push(`<tr><td>${y}</td><td>${fmt(g,0)}</td><td>${fmt(ng,0)}</td><td><b>${fmt(tot,0)}</b></td>${spec.paid?`<td>${fmt(pd,0)}</td>`:''}<td>${prem?Math.round((tot+pd)/prem*100)+'%':'—'}</td><td>${(r=>r==null?'—':(r*100).toFixed(1)+'%')(irrAt(fl,y))}</td></tr>`);}
+    sub=`${p.code} · ${TERMNAME(S.term)}供款 · ${p.amtLabel} ${S.amt.toLocaleString('en-US')} USD · 總保費 ${fmt(t.rows[t.rows.length-1][1]*k,0)} USD。數值與投保年齡、性別無關；表只到受保人 100 歲。`;
     notes.push(`計法：建議書數值 × ${p.amtLabel} ÷ ${t.base.toLocaleString('en-US')}，與建議書最多相差幾美元（四捨五入）。`);
     if(spec.paid)notes.push(`「已收」＝${spec.paidLab}；「÷已繳」＝（退保價值＋已收）÷ 已繳保費。`);
+    notes.push(`IRR（內部回報率）＝假設在該年度終結時退保的年化回報：保費於每年年初繳付${spec.paid?'，已收金額按每年年末收取計':''}，以年繳計。數值與名義金額無關。`);
+    {const be=breakEven(fl,false), bg=spec.paid&&S.prod.startsWith('EGI')?null:breakEven(fl,true);
+     notes.push(`回本（退保價值${spec.paid?'＋已收':''} ≥ 已繳保費）：預期第 ${be??'—'} 年${bg?`；保證第 ${bg} 年`:''}。`);}
     if(S.prod==='TRST'&&S.amt>=1000000)notes.push('名義金額 ≥ 1,000,000：用 1,000,000 名義金額的建議書（保費 99 折，保證現金價值同為 99%）。');
     if(spec.note)notes.push(spec.note);
     if(S.mode!=='A'&&mode)notes.push('已繳保費按年繳計；非年繳保單的實際已繳保費略高。');
