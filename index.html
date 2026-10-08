@@ -38,6 +38,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .wrap{max-width:560px;margin:0 auto;padding-inline:16px;padding-block:14px 40px;display:flex;flex-direction:column;gap:14px}
 header h1{margin:0;font-size:22px;letter-spacing:.02em}
 header p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.cats{display:flex;gap:6px;border-bottom:1px solid var(--line)}
+.cats button{flex:1 1 0;border:0;border-bottom:3px solid transparent;background:transparent;color:var(--muted);font:inherit;font-size:15px;padding:8px 4px 9px;cursor:pointer;margin-bottom:-1px}
+.cats button small{font-family:var(--f-num);font-size:11px;margin-left:4px;opacity:.75}
+.cats button[aria-selected="true"]{color:var(--ink);font-weight:700;border-bottom-color:var(--accent)}
+.cats button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .rail{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
 .chip{min-width:0;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:7px 10px;text-align:left;font:inherit;font-size:13.5px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
 .chip small{font-family:var(--f-num);font-size:10.5px;color:var(--muted);letter-spacing:.04em}
@@ -130,6 +135,7 @@ img{max-width:100%}
     <p>按保誠產品手冊費率計算 · 只供內部參考，正式報價以建議書為準</p>
   </header>
 
+  <div class="cats app-part" id="cats" role="tablist" aria-label="產品類別"></div>
   <nav class="rail app-part" id="rail" aria-label="產品"></nav>
 
   <section class="card" id="form" aria-label="投保資料"></section>
@@ -332,6 +338,12 @@ ORDER=ORDER_ALL.filter(k=>P[k]);
 
 const ORDER_ALL=['CIM3','CIE3','CIP2','ECI','CRC','C360','CIT2','ENCASH','MCVIP','VIP','VFP','VEP','VSP','MLP','PMP','PPM','HTPR','CP','CPE','LFRE2','PVPP','BCIM3','LFREE','PLP2','PLCS','EGIP','EGI','PRMESP','TRST','PACE','ENLIT'];
 let ORDER=ORDER_ALL.filter(k=>P[k]);
+const CATS=[
+  {id:'sav',name:'儲蓄',list:['TRST','PACE','PRMESP','ENLIT','EGI','EGIP','PLCS','LFRE2','LFREE','PLP2','PVPP','ENCASH']},
+  {id:'ci',name:'重疾',list:['CIM3','BCIM3','CIE3','CIP2','ECI','CRC','C360','CIT2']},
+  {id:'med',name:'醫療',list:['VIP','VFP','VEP','VSP','MLP','PMP','PPM','HTPR','MCVIP','CP','CPE']},
+];
+const catOf=k=>(CATS.find(c=>c.list.includes(k))||CATS[1]).id;
 const TERMNAME=t=>t==='single'?'整付':t==='life'||t==='renewY'?'每年續保':(t==='66'||t==='86')?'至 '+t+' 歲':t+' 年';
 
 let S = {prod:'CIM3',gender:'M',smoker:'N',cur:'USD',region:'A',term:'20',mode:'A',age:35,amt:100000,plan:'3',ded:'Z',opd:'N',pcls:'STN',pregion:'A+'};
@@ -342,7 +354,13 @@ const fmt=(x,d=2)=>x.toLocaleString('en-US',{minimumFractionDigits:d,maximumFrac
 const $=id=>document.getElementById(id);
 
 function renderRail(){
-  $('rail').innerHTML=ORDER.map(k=>`<button class="chip" type="button" data-p="${k}" aria-pressed="${S.prod===k}"><small>${P[k].code}</small>${P[k].name}</button>`).join('');
+  if(!S.cat||!CATS.some(c=>c.id===S.cat))S.cat=catOf(S.prod);
+  const cat=CATS.find(c=>c.id===S.cat), list=cat.list.filter(k=>P[k]);
+  $('cats').innerHTML=CATS.map(c=>`<button type="button" role="tab" data-c="${c.id}" aria-selected="${c.id===S.cat}">${c.name}<small>${c.list.filter(k=>P[k]).length}</small></button>`).join('');
+  $('cats').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(S.cat===b.dataset.c)return;S.cat=b.dataset.c;const c=CATS.find(x=>x.id===S.cat);
+    if(catOf(S.prod)!==S.cat){S.prod=(S['last_'+S.cat]&&P[S['last_'+S.cat]])?S['last_'+S.cat]:c.list.find(k=>P[k]);normalize();}render();});
+  S['last_'+S.cat]=S.prod;
+  $('rail').innerHTML=list.map(k=>`<button class="chip" type="button" data-p="${k}" aria-pressed="${S.prod===k}"><small>${P[k].code}</small>${P[k].name}</button>`).join('');
   $('rail').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.prod=b.dataset.p;normalize();render();b.scrollIntoView({inline:'nearest',block:'nearest'});});
 }
 function seg(id,label,opts,val,dis){
